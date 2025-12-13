@@ -33,6 +33,7 @@ h1, h2, h3 {
 
 .list-item {
     background-color: #111a2b;
+ 
     margin-bottom: 10px;
     padding: 12px;
     border-radius: 8px;
@@ -68,7 +69,8 @@ h1, h2, h3 {
 
 /* Form styles */
 form {
-    display: flex;
+    d
+        isplay: flex;
     flex-direction: column;
 }
 
@@ -103,7 +105,8 @@ textarea {
     flex: 1;
     padding: 16px;
     font-size: 18px;
-    border: none;
+    borde
+        r: none;
     border-radius: 8px;
     cursor: pointer;
 }
@@ -281,4 +284,76 @@ textarea {
 .unit-pill {
   background-color: #E5E7EB;
   color: #1A1A1A;
+}
+
+/* v0.8.0 slice A1: Bottom navigation and palette overrides */
+
+/* Primary button (global) */
+.button-primary {
+  background-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.button-primary:active {
+  background-color: #1D4ED8;
+}
+
+/* Success button (make) */
+.make-btn {
+  background-color: #16A34A;
+  color: #FFFFFF;
+}
+
+.make-btn:active {
+  background-color: #15803D;
+}
+
+/* Error button (miss) */
+.miss-btn {
+  background-color: #DC2626;
+  color: #FFFFFF;
+}
+
+.miss-btn:active {
+  background-color: #B91C1C;
+}
+
+/* Result selected button border */
+.result-buttons button.selected {
+  border: 3px solid #2563EB;
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.5);
+}
+
+/* Bottom navigation */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  background-color: #FFFFFF;
+  border-top: 1px solid #D1D5DB;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 100;
+}
+
+.nav-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  color: #555555;
+  font-size: 14px;
+}
+
+.nav-item.active {
+  color: #2563EB;
+  font-weight: 600;
+}
+
+/* Ensure app content is not hidden behind nav */
+#app {
+  padding-bottom: 80px;
 }
