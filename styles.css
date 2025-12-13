@@ -355,5 +355,26 @@ textarea {
 
 /* Ensure app content is not hidden behind nav */
 #app {
+    
+/* v0.8.0 Slice A: Additional palette overrides */
+.list-item {
+    background-color: #FFFFFF;
+    border: 1px solid #D1D5DB;
+    box-shadow: none;
+    color: #1A1A1A;
+}
+.list-item button {
+    color: #2563EB;
+}
+.modal {
+    background-color: #FFFFFF;
+    color: #1A1A1A;
+}
+input, select, textarea {
+    background-color: #FFFFFF;
+    color: #1A1A1A;
+    border: 1px solid #D1D5DB;
+}
+
   padding-bottom: 80px;
 }
