@@ -3,8 +3,8 @@ body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     /* Soft dark slate background with muted text. Accent color is used sparingly. */
-    background-color: #0f172a;
-    color: #e5e5e5;
+background-color: #F7F8FA;
+    color: #1A1A1A;
     padding-bottom: 16px; /* reduced bottom padding since export button is removed */
 }
 
@@ -234,8 +234,8 @@ textarea {
 }
 
 .modal .save-settings-btn {
-    background-color: #39ff14;
-    color: #0d1321;
+    #2563EB: #2563EB;
+    color:#FFFFFF#0d1321;
 }
 
 .modal .cancel-settings-btn {
@@ -265,4 +265,20 @@ textarea {
     font-size: 12px;
     display: inline-block;
     margin-left: 4px;
+}
+
+/* v0.8.0 overrides */
+.modal .save-settings-btn {
+  background-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.modal .cancel-settings-btn {
+  background-color: #D1D5DB;
+  color: #1A1A1A;
+}
+
+.unit-pill {
+  background-color: #E5E7EB;
+  color: #1A1A1A;
 }
