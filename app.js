@@ -8,6 +8,276 @@
 (function() {
     const app = document.getElementById('app');
     const exportBtn = document.getElementById('exportBtn');
+    // Settings storage key for Taykof defaults
+    const SETTINGS_KEY = 'taykof_settings_v1';
+
+    /**
+     * Load settings from localStorage or return defaults. Settings control default
+     * units and step type used when creating a new jump. These settings do not
+     * modify existing stored data and are stored under a separate key from the
+     * core data model.
+     * @returns {{stepsType: string, gripUnit: string, takeoffUnit: string, barUnit: string, standardsUnit: string}}
+     */
+    function getSettings() {
+        const defaultSettings = {
+            stepsType: 'total',
+            gripUnit: 'imperial',
+            takeoffUnit: 'imperial',
+            barUnit: 'imperial',
+            standardsUnit: 'inches'
+        };
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) {
+            return defaultSettings;
+        }
+        try {
+            const parsed = JSON.parse(raw);
+            return Object.assign({}, defaultSettings, parsed);
+        } catch (e) {
+            console.error('Failed to parse settings', e);
+            return defaultSettings;
+        }
+    }
+
+    /**
+     * Persist settings back to localStorage. Call this after user updates
+     * defaults in the Settings modal.
+     * @param {object} newSettings
+     */
+    function saveSettings(newSettings) {
+        try {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+        } catch (e) {
+            console.error('Failed to save settings', e);
+        }
+    }
+
+    /**
+     * Build and display the Settings modal. Allows the coach to configure
+     * default units and step type. When the Save button is pressed the new
+     * settings are persisted and the modal is closed.
+     */
+    function renderSettingsModal() {
+        const current = getSettings();
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <h2>Settings</h2>
+            <label>Default Steps Type
+                <select id="setStepsType">
+                    <option value="lefts" ${current.stepsType === 'lefts' ? 'selected' : ''}>Lefts</option>
+                    <option value="rights" ${current.stepsType === 'rights' ? 'selected' : ''}>Rights</option>
+                    <option value="total" ${current.stepsType === 'total' ? 'selected' : ''}>Total</option>
+                </select>
+            </label>
+            <label>Default Grip Units
+                <select id="setGripUnit">
+                    <option value="imperial" ${current.gripUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                    <option value="metric" ${current.gripUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                </select>
+            </label>
+            <label>Default Takeoff Units
+                <select id="setTakeoffUnit">
+                    <option value="imperial" ${current.takeoffUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                    <option value="metric" ${current.takeoffUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                </select>
+            </label>
+            <label>Default Bar Height Units
+                <select id="setBarUnit">
+                    <option value="imperial" ${current.barUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                    <option value="metric" ${current.barUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                </select>
+            </label>
+            <label>Default Standards Units
+                <select id="setStandardsUnit">
+                    <option value="inches" ${current.standardsUnit === 'inches' ? 'selected' : ''}>Inches</option>
+                    <option value="cm" ${current.standardsUnit === 'cm' ? 'selected' : ''}>Centimeters</option>
+                </select>
+            </label>
+            <div class="button-group">
+                <button class="save-settings-btn" type="button">Save</button>
+                <button class="cancel-settings-btn" type="button">Cancel</button>
+            </div>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        // Event handlers
+        modal.querySelector('.save-settings-btn').addEventListener('click', () => {
+            const updated = {
+                stepsType: modal.querySelector('#setStepsType').value,
+                gripUnit: modal.querySelector('#setGripUnit').value,
+                takeoffUnit: modal.querySelector('#setTakeoffUnit').value,
+                barUnit: modal.querySelector('#setBarUnit').value,
+                standardsUnit: modal.querySelector('#setStandardsUnit').value
+            };
+            saveSettings(updated);
+            document.body.removeChild(overlay);
+        });
+        modal.querySelector('.cancel-settings-btn').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+        });
+    }
+
+    /**
+     * Create a gear button that opens the settings modal. This button is
+     * positioned in the top‑right corner and remains visible on all screens.
+     */
+    function createSettingsButton() {
+        if (document.getElementById('settingsBtn')) return;
+        const btn = document.createElement('button');
+        btn.id = 'settingsBtn';
+        btn.className = 'settings-btn';
+        // Unicode gear symbol
+        btn.innerHTML = '&#9881;';
+        btn.addEventListener('click', renderSettingsModal);
+        document.body.appendChild(btn);
+    }
+
+    /**
+     * Export the entire dataset as JSON, CSV or Excel. A modal is shown to
+     * choose the format. JSON export reuses Storage.exportData(). CSV and XLSX
+     * are generated client‑side.
+     */
+    function renderExportModal() {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <h2>Export Data</h2>
+            <p>Select a format to download your data.</p>
+            <div class="button-group">
+                <button id="export-json" type="button">JSON</button>
+                <button id="export-csv" type="button">CSV</button>
+                <button id="export-xlsx" type="button">Excel</button>
+            </div>
+            <div class="button-group" style="justify-content:center;">
+                <button id="export-cancel" type="button" class="cancel-settings-btn">Cancel</button>
+            </div>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        modal.querySelector('#export-json').addEventListener('click', () => {
+            exportToJson();
+            document.body.removeChild(overlay);
+        });
+        modal.querySelector('#export-csv').addEventListener('click', () => {
+            exportToCsv();
+            document.body.removeChild(overlay);
+        });
+        modal.querySelector('#export-xlsx').addEventListener('click', () => {
+            exportToXlsx();
+            document.body.removeChild(overlay);
+        });
+        modal.querySelector('#export-cancel').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+        });
+    }
+
+    /**
+     * Create a downloadable file from a Blob and trigger the download.
+     * @param {Blob} blob
+     * @param {string} filename
+     */
+    function triggerDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+
+    /**
+     * Export data as JSON. Uses Storage.exportData() to generate a blob.
+     */
+    function exportToJson() {
+        const url = Storage.exportData();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'taykof-data.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+
+    /**
+     * Export data as CSV. Generates a simple CSV containing athletes and jumps
+     * sections separated by a blank line. Each section begins with a header row.
+     */
+    function exportToCsv() {
+        const data = Storage.loadData();
+        const lines = [];
+        // Athletes
+        lines.push('athlete_id,name,gender,weight_lbs');
+        data.athletes.forEach(a => {
+            lines.push(`${a.id},"${a.name.replace(/"/g, '""')}",${a.gender},${a.weightLbs}`);
+        });
+        lines.push(''); // empty line between sections
+        // Jumps
+        lines.push('jump_id,athlete_id,created_at,steps_count,steps_type,pole_brand,pole_weight,pole_length,grip_inches,grip_unit,takeoff_inches,takeoff_unit,bar_height_inches,bar_height_unit,standards_inches,standards_unit,result,notes');
+        data.jumps.forEach(j => {
+            const notesEscaped = (j.notes || '').replace(/"/g, '""');
+            lines.push(`${j.id},${j.athleteId},${j.createdAt},${j.stepsCount ?? ''},${j.stepsType ?? ''},${j.poleBrand ?? ''},${j.poleWeight ?? ''},${j.poleLength ?? ''},${j.gripInches ?? ''},${j.gripUnit ?? ''},${j.takeoffInches ?? ''},${j.takeoffUnit ?? ''},${j.barHeightInches ?? ''},${j.barHeightUnit ?? ''},${j.standardsInches ?? ''},${j.standardsUnit ?? ''},${j.result ?? ''},"${notesEscaped}"`);
+        });
+        const csvStr = lines.join('\n');
+        const blob = new Blob([csvStr], { type: 'text/csv' });
+        triggerDownload(blob, 'taykof-data.csv');
+    }
+
+    /**
+     * Export data as Excel (XLSX) using SheetJS. Creates two sheets:
+     * Athletes and Jumps. Requires xlsx.full.min.js loaded in the HTML.
+     */
+    function exportToXlsx() {
+        const data = Storage.loadData();
+        // Build workbook
+        const wb = XLSX.utils.book_new();
+        // Athletes sheet
+        const athleteRows = data.athletes.map(a => ({
+            athlete_id: a.id,
+            name: a.name,
+            gender: a.gender,
+            weight_lbs: a.weightLbs
+        }));
+        const wsAthletes = XLSX.utils.json_to_sheet(athleteRows);
+        XLSX.utils.book_append_sheet(wb, wsAthletes, 'Athletes');
+        // Jumps sheet
+        const jumpRows = data.jumps.map(j => ({
+            jump_id: j.id,
+            athlete_id: j.athleteId,
+            created_at: j.createdAt,
+            steps_count: j.stepsCount ?? '',
+            steps_type: j.stepsType ?? '',
+            pole_brand: j.poleBrand ?? '',
+            pole_weight: j.poleWeight ?? '',
+            pole_length: j.poleLength ?? '',
+            grip_inches: j.gripInches ?? '',
+            grip_unit: j.gripUnit ?? '',
+            takeoff_inches: j.takeoffInches ?? '',
+            takeoff_unit: j.takeoffUnit ?? '',
+            bar_height_inches: j.barHeightInches ?? '',
+            bar_height_unit: j.barHeightUnit ?? '',
+            standards_inches: j.standardsInches ?? '',
+            standards_unit: j.standardsUnit ?? '',
+            result: j.result ?? '',
+            notes: j.notes ?? ''
+        }));
+        const wsJumps = XLSX.utils.json_to_sheet(jumpRows);
+        XLSX.utils.book_append_sheet(wb, wsJumps, 'Jumps');
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+        // Convert string to ArrayBuffer
+        const buf = new ArrayBuffer(wbout.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < wbout.length; ++i) view[i] = wbout.charCodeAt(i) & 0xFF;
+        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        triggerDownload(blob, 'taykof-data.xlsx');
+    }
 
     /**
      * Utility to format dates in a readable way. Returns e.g. "Apr 12, 2025 3:45 PM".
@@ -215,9 +485,11 @@
             // determine last jump to prefill
             const previousJumps = Storage.getJumpsForAthlete(athlete.id);
             const lastJump = previousJumps.length > 0 ? previousJumps[0] : null;
+            // Load settings to determine default units when no last jump exists
+            const settings = getSettings();
             // Prefill values for steps
             const stepsCountVal = lastJump?.stepsCount ?? lastJump?.steps ?? '';
-            const stepsTypeVal = lastJump?.stepsType ?? 'total';
+            const stepsTypeVal = lastJump?.stepsType ?? settings.stepsType;
             // Prefill pole values
             const poleBrandVal = lastJump?.poleBrand ?? '';
             const poleWeightVal = lastJump?.poleWeight ?? '';
@@ -244,7 +516,7 @@
                 return meters * 39.3701;
             }
             // Prefill grip values
-            const gripUnitVal = lastJump?.gripUnit ?? 'imperial';
+            const gripUnitVal = lastJump?.gripUnit ?? settings.gripUnit;
             const gripInchesVal = lastJump?.gripInches ? parseFloat(lastJump.gripInches) : null;
             let gripFeetVal = '';
             let gripInchesRemVal = '';
@@ -263,7 +535,7 @@
                 }
             }
             // Prefill takeoff values
-            const takeoffUnitVal = lastJump?.takeoffUnit ?? 'imperial';
+            const takeoffUnitVal = lastJump?.takeoffUnit ?? settings.takeoffUnit;
             const takeoffInchesVal = lastJump?.takeoffInches ? parseFloat(lastJump.takeoffInches) : null;
             let takeoffFeetVal = '';
             let takeoffInchesRemVal = '';
@@ -282,7 +554,7 @@
                 }
             }
             // Prefill bar height values
-            const barUnitVal = lastJump?.barHeightUnit ?? 'imperial';
+            const barUnitVal = lastJump?.barHeightUnit ?? settings.barUnit;
             const barInchesVal = lastJump?.barHeightInches ? parseFloat(lastJump.barHeightInches) : null;
             let barFeetVal = '';
             let barInchesRemVal = '';
@@ -301,7 +573,7 @@
                 }
             }
             // Prefill standards
-            const standardsUnitVal = lastJump?.standardsUnit ?? 'inches';
+            const standardsUnitVal = lastJump?.standardsUnit ?? settings.standardsUnit;
             const standardsInchesVal = lastJump?.standardsInches ? parseFloat(lastJump.standardsInches) : null;
             let standardsDisplayVal = '';
             if (standardsInchesVal !== null) {
@@ -314,7 +586,7 @@
             const notesVal = lastJump?.notes ?? '';
 
             const form = document.createElement('form');
-            // Build form HTML with prefilled values
+            // Build form HTML with prefilled values. Units are derived from last jump or global settings.
             form.innerHTML = `
                 <div class="field-group">
                     <label>Steps Count
@@ -345,78 +617,53 @@
                     </label>
                 </div>
                 <div class="field-group">
-                    <label>Grip Units
-                        <select id="gripUnit">
-                            <option value="imperial" ${gripUnitVal === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
-                            <option value="metric" ${gripUnitVal === 'metric' ? 'selected' : ''}>Metric (m)</option>
-                        </select>
+                    <label>Grip
+                        <div class="field-row">
+                            ${gripUnitVal === 'imperial' ? `
+                                <input type="number" id="gripFeet" class="field-number" value="${gripFeetVal}" min="0" step="1">
+                                <input type="number" id="gripInchesInput" class="field-number" value="${gripInchesRemVal}" min="0" step="0.1">
+                                <span class="unit-pill">ft/in</span>
+                            ` : `
+                                <input type="number" id="gripMeters" class="field-number" value="${gripMetersVal}" min="0" step="0.01">
+                                <span class="unit-pill">m</span>
+                            `}
+                        </div>
                     </label>
-                    <div id="gripImperial" class="unit-group" style="display: ${gripUnitVal === 'imperial' ? 'flex' : 'none'}; gap: 8px;">
-                        <label>ft
-                            <input type="number" id="gripFeet" value="${gripFeetVal}" min="0" step="1">
-                        </label>
-                        <label>in
-                            <input type="number" id="gripInchesInput" value="${gripInchesRemVal}" min="0" step="0.1">
-                        </label>
-                    </div>
-                    <div id="gripMetric" class="unit-group" style="display: ${gripUnitVal === 'metric' ? 'flex' : 'none'}; gap: 8px;">
-                        <label>m
-                            <input type="number" id="gripMeters" value="${gripMetersVal}" min="0" step="0.01">
-                        </label>
-                    </div>
                 </div>
                 <div class="field-group">
-                    <label>Takeoff Units
-                        <select id="takeoffUnit">
-                            <option value="imperial" ${takeoffUnitVal === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
-                            <option value="metric" ${takeoffUnitVal === 'metric' ? 'selected' : ''}>Metric (m)</option>
-                        </select>
+                    <label>Takeoff
+                        <div class="field-row">
+                            ${takeoffUnitVal === 'imperial' ? `
+                                <input type="number" id="takeoffFeet" class="field-number" value="${takeoffFeetVal}" min="0" step="1">
+                                <input type="number" id="takeoffInchesInput" class="field-number" value="${takeoffInchesRemVal}" min="0" step="0.1">
+                                <span class="unit-pill">ft/in</span>
+                            ` : `
+                                <input type="number" id="takeoffMeters" class="field-number" value="${takeoffMetersVal}" min="0" step="0.01">
+                                <span class="unit-pill">m</span>
+                            `}
+                        </div>
                     </label>
-                    <div id="takeoffImperial" class="unit-group" style="display: ${takeoffUnitVal === 'imperial' ? 'flex' : 'none'}; gap: 8px;">
-                        <label>ft
-                            <input type="number" id="takeoffFeet" value="${takeoffFeetVal}" min="0" step="1">
-                        </label>
-                        <label>in
-                            <input type="number" id="takeoffInchesInput" value="${takeoffInchesRemVal}" min="0" step="0.1">
-                        </label>
-                    </div>
-                    <div id="takeoffMetric" class="unit-group" style="display: ${takeoffUnitVal === 'metric' ? 'flex' : 'none'}; gap: 8px;">
-                        <label>m
-                            <input type="number" id="takeoffMeters" value="${takeoffMetersVal}" min="0" step="0.01">
-                        </label>
-                    </div>
                 </div>
                 <div class="field-group">
-                    <label>Bar Height Units
-                        <select id="barUnit">
-                            <option value="imperial" ${barUnitVal === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
-                            <option value="metric" ${barUnitVal === 'metric' ? 'selected' : ''}>Metric (m)</option>
-                        </select>
+                    <label>Bar Height
+                        <div class="field-row">
+                            ${barUnitVal === 'imperial' ? `
+                                <input type="number" id="barFeet" class="field-number" value="${barFeetVal}" min="0" step="1">
+                                <input type="number" id="barInchesInput" class="field-number" value="${barInchesRemVal}" min="0" step="0.1">
+                                <span class="unit-pill">ft/in</span>
+                            ` : `
+                                <input type="number" id="barMeters" class="field-number" value="${barMetersVal}" min="0" step="0.01">
+                                <span class="unit-pill">m</span>
+                            `}
+                        </div>
                     </label>
-                    <div id="barImperial" class="unit-group" style="display: ${barUnitVal === 'imperial' ? 'flex' : 'none'}; gap: 8px;">
-                        <label>ft
-                            <input type="number" id="barFeet" value="${barFeetVal}" min="0" step="1">
-                        </label>
-                        <label>in
-                            <input type="number" id="barInchesInput" value="${barInchesRemVal}" min="0" step="0.1">
-                        </label>
-                    </div>
-                    <div id="barMetric" class="unit-group" style="display: ${barUnitVal === 'metric' ? 'flex' : 'none'}; gap: 8px;">
-                        <label>m
-                            <input type="number" id="barMeters" value="${barMetersVal}" min="0" step="0.01">
-                        </label>
-                    </div>
                 </div>
                 <div class="field-group">
-                    <label>Standards Units
-                        <select id="standardsUnit">
-                            <option value="inches" ${standardsUnitVal === 'inches' ? 'selected' : ''}>Inches</option>
-                            <option value="cm" ${standardsUnitVal === 'cm' ? 'selected' : ''}>Centimeters</option>
-                        </select>
-                    </label>
-                    <label>Adjustment
-                        <!-- standardsValue will be populated dynamically based on selected unit (inches or cm) -->
-                        <select id="standardsValue"></select>
+                    <label>Standards
+                        <div class="field-row">
+                            <select id="standardsValue"></select>
+                            <span class="unit-pill">${standardsUnitVal === 'cm' ? 'cm' : 'in'}</span>
+                        </div>
                     </label>
                 </div>
                 <label>Notes (optional)
@@ -425,24 +672,7 @@
             `;
             container.appendChild(form);
 
-            // event handlers for dynamic unit fields
-            function toggleUnitFields(unitSelectId, imperialDivId, metricDivId) {
-                const selectEl = form.querySelector(`#${unitSelectId}`);
-                const imperialEl = form.querySelector(`#${imperialDivId}`);
-                const metricEl = form.querySelector(`#${metricDivId}`);
-                selectEl.addEventListener('change', () => {
-                    if (selectEl.value === 'imperial') {
-                        imperialEl.style.display = 'flex';
-                        metricEl.style.display = 'none';
-                    } else {
-                        imperialEl.style.display = 'none';
-                        metricEl.style.display = 'flex';
-                    }
-                });
-            }
-            toggleUnitFields('gripUnit', 'gripImperial', 'gripMetric');
-            toggleUnitFields('takeoffUnit', 'takeoffImperial', 'takeoffMetric');
-            toggleUnitFields('barUnit', 'barImperial', 'barMetric');
+            // no dynamic unit selects; units are controlled by settings or last jump.
             // handle pole selection
             const poleSelectEl = form.querySelector('#poleSelect');
             poleSelectEl.addEventListener('change', () => {
@@ -460,12 +690,9 @@
                 }
             });
 
-            // populate standards dropdown based on selected unit
-            function populateStandardsOptions() {
-                const unitSelect = form.querySelector('#standardsUnit');
+            // Populate standards dropdown based on the selected unit (from last jump or settings).
+            function populateStandardsOptions(selectedUnit) {
                 const valueSelect = form.querySelector('#standardsValue');
-                const selectedUnit = unitSelect.value;
-                // clear existing options
                 valueSelect.innerHTML = '';
                 let options = [];
                 if (selectedUnit === 'cm') {
@@ -478,7 +705,6 @@
                     for (let inch = 18; inch <= 31; inch++) {
                         options.push({ label: `${inch} in`, value: inch });
                     }
-                    // include 31.5 inch as last option
                     options.push({ label: '31.5 in', value: 31.5 });
                 }
                 options.forEach(opt => {
@@ -491,15 +717,12 @@
                 let preselect = null;
                 if (standardsInchesVal != null) {
                     if (selectedUnit === 'cm') {
-                        // convert stored inches to cm for comparison; round to nearest 5
                         const cmVal = standardsInchesVal / 0.393701;
-                        // find nearest allowed value
                         preselect = Math.round(cmVal / 5) * 5;
                         if (preselect < 45) preselect = 45;
                         if (preselect > 80) preselect = 80;
                     } else {
                         const inchVal = standardsInchesVal;
-                        // if within 0.75 inch of 31.5, choose 31.5; else round to nearest inch
                         if (inchVal > 31) {
                             preselect = 31.5;
                         } else {
@@ -510,17 +733,14 @@
                     }
                 }
                 if (preselect != null) {
-                    // set selected option if exists
                     const matchOption = Array.from(valueSelect.options).find(o => parseFloat(o.value) === parseFloat(preselect));
                     if (matchOption) {
                         matchOption.selected = true;
                     }
                 }
             }
-            // initial population of standards options after form creation
-            populateStandardsOptions();
-            // update dropdown when unit changes
-            form.querySelector('#standardsUnit').addEventListener('change', populateStandardsOptions);
+            // initial population of standards options
+            populateStandardsOptions(standardsUnitVal);
 
             // result selection
             let selectedResult = 'make'; // default
@@ -569,7 +789,7 @@
                     Storage.addPole({ brand: poleBrand, weight: poleWeight, length: poleLength });
                 }
                 // grip
-                const gripUnit = form.querySelector('#gripUnit').value;
+                const gripUnit = gripUnitVal;
                 let gripInchesCalc = null;
                 if (gripUnit === 'imperial') {
                     const feetVal = parseFloat(form.querySelector('#gripFeet').value) || 0;
@@ -580,7 +800,7 @@
                     gripInchesCalc = mVal * 39.3701;
                 }
                 // takeoff
-                const takeoffUnit = form.querySelector('#takeoffUnit').value;
+                const takeoffUnit = takeoffUnitVal;
                 let takeoffInchesCalc = null;
                 if (takeoffUnit === 'imperial') {
                     const feetVal = parseFloat(form.querySelector('#takeoffFeet').value) || 0;
@@ -591,7 +811,7 @@
                     takeoffInchesCalc = mVal * 39.3701;
                 }
                 // bar height
-                const barUnit = form.querySelector('#barUnit').value;
+                const barUnit = barUnitVal;
                 let barInchesCalc = null;
                 if (barUnit === 'imperial') {
                     const feetVal = parseFloat(form.querySelector('#barFeet').value) || 0;
@@ -602,7 +822,7 @@
                     barInchesCalc = mVal * 39.3701;
                 }
                 // standards
-                const standardsUnit = form.querySelector('#standardsUnit').value;
+                const standardsUnit = standardsUnitVal;
                 // standardsValue is a select; parse its value as float
                 const standardsVal = parseFloat(form.querySelector('#standardsValue').value);
                 let standardsInchesCalc = 0;
@@ -775,19 +995,15 @@
 
     // Export data button handler
     exportBtn.addEventListener('click', () => {
-        const url = Storage.exportData();
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'pole-vault-data.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        // release object URL
-        setTimeout(() => URL.revokeObjectURL(url), 100);
+        // Show export options modal instead of immediate JSON download
+        renderExportModal();
     });
 
     // Kick off the app by rendering the athletes list
     navigate(renderAthletesList);
+
+    // Create the persistent settings gear button
+    createSettingsButton();
 
     /**
      * Show a one‑time guidance banner for iOS users who are not using Safari.

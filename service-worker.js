@@ -6,7 +6,9 @@
  * background sync and more complex caching strategies.
  */
 
-const CACHE_NAME = 'pv-coach-cache-v2';
+// Updated cache name for Taykof v0.6.0. Increment this value whenever
+// making changes to the cached files so the service worker picks up the new assets.
+const CACHE_NAME = 'taykof-cache-v1';
 /*
  * Determine the base path for caching resources. When deployed under a
  * subpath (e.g. GitHub Pages), the service worker will be located at
@@ -23,7 +25,9 @@ const URLS_TO_CACHE = [
   'app.js',
   'storage.js',
   'manifest.json',
-  'icon.png'
+  // include new icons for the PWA; these are referenced in the manifest
+  'icon-192.png',
+  'icon-512.png'
 ].map(path => {
   // ensure leading slash and join with base path
   const normalized = path.startsWith('/') ? path.slice(1) : path;
@@ -31,6 +35,8 @@ const URLS_TO_CACHE = [
 });
 
 self.addEventListener('install', event => {
+  // Take control of the page immediately after installation.
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -40,17 +46,20 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  // remove old caches if any
+  // Claim any clients immediately so the service worker is controlling pages as soon as possible.
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
+    (async () => {
+      // Remove old caches that don't match the current CACHE_NAME
+      const cacheNames = await caches.keys();
+      await Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
       );
-    })
+      await self.clients.claim();
+    })()
   );
 });
 
