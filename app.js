@@ -21,11 +21,23 @@
      */
     function getSettings() {
         const defaultSettings = {
+            // Which leg/foot counting style to default to when logging steps
             stepsType: 'total',
+            // Default units for grip, takeoff and bar height measurements
             gripUnit: 'imperial',
             takeoffUnit: 'imperial',
             barUnit: 'imperial',
-            standardsUnit: 'inches'
+            standardsUnit: 'inches',
+            // Default unit for the approach mark (imperial/metric)
+            approachUnit: 'imperial',
+            // Whether the coach's intermediate mark should be used at all
+            enableCoachMark: false,
+            // Coach mark type: 'distance' or 'step'. Distance uses units similar to approach
+            coachMarkType: 'distance',
+            // Default unit for coach mark distance (imperial/metric)
+            coachMarkUnit: 'imperial',
+            // Whether the takeoff step check is enabled
+            enableTakeoffStepCheck: false
         };
         const raw = localStorage.getItem(SETTINGS_KEY);
         if (!raw) {
@@ -66,37 +78,69 @@
         modal.className = 'modal';
         modal.innerHTML = `
             <h2>Settings</h2>
-            <label>Default Steps Type
-                <select id="setStepsType">
-                    <option value="lefts" ${current.stepsType === 'lefts' ? 'selected' : ''}>Lefts</option>
-                    <option value="rights" ${current.stepsType === 'rights' ? 'selected' : ''}>Rights</option>
-                    <option value="total" ${current.stepsType === 'total' ? 'selected' : ''}>Total</option>
-                </select>
-            </label>
-            <label>Default Grip Units
-                <select id="setGripUnit">
-                    <option value="imperial" ${current.gripUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
-                    <option value="metric" ${current.gripUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
-                </select>
-            </label>
-            <label>Default Takeoff Units
-                <select id="setTakeoffUnit">
-                    <option value="imperial" ${current.takeoffUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
-                    <option value="metric" ${current.takeoffUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
-                </select>
-            </label>
-            <label>Default Bar Height Units
-                <select id="setBarUnit">
-                    <option value="imperial" ${current.barUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
-                    <option value="metric" ${current.barUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
-                </select>
-            </label>
-            <label>Default Standards Units
-                <select id="setStandardsUnit">
-                    <option value="inches" ${current.standardsUnit === 'inches' ? 'selected' : ''}>Inches</option>
-                    <option value="cm" ${current.standardsUnit === 'cm' ? 'selected' : ''}>Centimeters</option>
-                </select>
-            </label>
+            <div class="settings-section">
+                <label>Default Steps Type
+                    <select id="setStepsType">
+                        <option value="lefts" ${current.stepsType === 'lefts' ? 'selected' : ''}>Lefts</option>
+                        <option value="rights" ${current.stepsType === 'rights' ? 'selected' : ''}>Rights</option>
+                        <option value="total" ${current.stepsType === 'total' ? 'selected' : ''}>Total</option>
+                    </select>
+                </label>
+                <label>Default Grip Units
+                    <select id="setGripUnit">
+                        <option value="imperial" ${current.gripUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                        <option value="metric" ${current.gripUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                    </select>
+                </label>
+                <label>Default Takeoff Units
+                    <select id="setTakeoffUnit">
+                        <option value="imperial" ${current.takeoffUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                        <option value="metric" ${current.takeoffUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                    </select>
+                </label>
+                <label>Default Bar Height Units
+                    <select id="setBarUnit">
+                        <option value="imperial" ${current.barUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                        <option value="metric" ${current.barUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                    </select>
+                </label>
+                <label>Default Standards Units
+                    <select id="setStandardsUnit">
+                        <option value="inches" ${current.standardsUnit === 'inches' ? 'selected' : ''}>Inches</option>
+                        <option value="cm" ${current.standardsUnit === 'cm' ? 'selected' : ''}>Centimeters</option>
+                    </select>
+                </label>
+                <label>Default Approach Units
+                    <select id="setApproachUnit">
+                        <option value="imperial" ${current.approachUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                        <option value="metric" ${current.approachUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                    </select>
+                </label>
+                <label>Use Coach's Mark
+                    <input type="checkbox" id="setEnableCoachMark" ${current.enableCoachMark ? 'checked' : ''}>
+                </label>
+                <div id="coachMarkSettings" style="display:${current.enableCoachMark ? 'block' : 'none'};">
+                    <label>Coach's Mark Type
+                        <select id="setCoachMarkType">
+                            <option value="distance" ${current.coachMarkType === 'distance' ? 'selected' : ''}>Distance</option>
+                            <option value="step" ${current.coachMarkType === 'step' ? 'selected' : ''}>Step</option>
+                        </select>
+                    </label>
+                    <label id="coachMarkUnitLabel" style="display:${current.coachMarkType === 'distance' ? 'block' : 'none'};">Coach's Mark Units
+                        <select id="setCoachMarkUnit">
+                            <option value="imperial" ${current.coachMarkUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                            <option value="metric" ${current.coachMarkUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
+                        </select>
+                    </label>
+                </div>
+                <label>Takeoff Step Check
+                    <input type="checkbox" id="setEnableTakeoffStepCheck" ${current.enableTakeoffStepCheck ? 'checked' : ''}>
+                </label>
+            </div>
+            <h3>Data Management</h3>
+            <div class="button-group" style="margin-bottom:8px;">
+                <button id="settings-export-btn" type="button" class="button-primary">Export Data</button>
+            </div>
             <div class="button-group">
                 <button class="save-settings-btn" type="button">Save</button>
                 <button class="cancel-settings-btn" type="button">Cancel</button>
@@ -104,14 +148,37 @@
         `;
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
-        // Event handlers
+        // Event handlers for dynamic coach mark fields
+        const enableCoachMarkEl = modal.querySelector('#setEnableCoachMark');
+        const coachMarkSettingsEl = modal.querySelector('#coachMarkSettings');
+        const coachMarkTypeEl = modal.querySelector('#setCoachMarkType');
+        const coachMarkUnitLabelEl = modal.querySelector('#coachMarkUnitLabel');
+        enableCoachMarkEl.addEventListener('change', () => {
+            coachMarkSettingsEl.style.display = enableCoachMarkEl.checked ? 'block' : 'none';
+        });
+        coachMarkTypeEl.addEventListener('change', () => {
+            coachMarkUnitLabelEl.style.display = coachMarkTypeEl.value === 'distance' ? 'block' : 'none';
+        });
+        // Export from settings
+        modal.querySelector('#settings-export-btn').addEventListener('click', () => {
+            // Close settings modal first
+            document.body.removeChild(overlay);
+            // Open export modal
+            renderExportModal();
+        });
+        // Save and cancel handlers
         modal.querySelector('.save-settings-btn').addEventListener('click', () => {
             const updated = {
                 stepsType: modal.querySelector('#setStepsType').value,
                 gripUnit: modal.querySelector('#setGripUnit').value,
                 takeoffUnit: modal.querySelector('#setTakeoffUnit').value,
                 barUnit: modal.querySelector('#setBarUnit').value,
-                standardsUnit: modal.querySelector('#setStandardsUnit').value
+                standardsUnit: modal.querySelector('#setStandardsUnit').value,
+                approachUnit: modal.querySelector('#setApproachUnit').value,
+                enableCoachMark: modal.querySelector('#setEnableCoachMark').checked,
+                coachMarkType: modal.querySelector('#setCoachMarkType').value,
+                coachMarkUnit: modal.querySelector('#setCoachMarkUnit') ? modal.querySelector('#setCoachMarkUnit').value : 'imperial',
+                enableTakeoffStepCheck: modal.querySelector('#setEnableTakeoffStepCheck').checked
             };
             saveSettings(updated);
             document.body.removeChild(overlay);
@@ -221,10 +288,10 @@
         });
         lines.push(''); // empty line between sections
         // Jumps
-        lines.push('jump_id,athlete_id,created_at,steps_count,steps_type,pole_brand,pole_weight,pole_length,grip_inches,grip_unit,takeoff_inches,takeoff_unit,bar_height_inches,bar_height_unit,standards_inches,standards_unit,result,notes');
+        lines.push('jump_id,athlete_id,created_at,steps_count,steps_type,pole_brand,pole_weight,pole_length,grip_inches,grip_unit,takeoff_inches,takeoff_unit,bar_height_inches,bar_height_unit,standards_inches,standards_unit,approach_inches,approach_unit,coach_mark_type,coach_mark_inches,coach_mark_unit,coach_mark_step,hit_coach_mark,hit_takeoff_step,result,notes');
         data.jumps.forEach(j => {
             const notesEscaped = (j.notes || '').replace(/"/g, '""');
-            lines.push(`${j.id},${j.athleteId},${j.createdAt},${j.stepsCount ?? ''},${j.stepsType ?? ''},${j.poleBrand ?? ''},${j.poleWeight ?? ''},${j.poleLength ?? ''},${j.gripInches ?? ''},${j.gripUnit ?? ''},${j.takeoffInches ?? ''},${j.takeoffUnit ?? ''},${j.barHeightInches ?? ''},${j.barHeightUnit ?? ''},${j.standardsInches ?? ''},${j.standardsUnit ?? ''},${j.result ?? ''},"${notesEscaped}"`);
+            lines.push(`${j.id},${j.athleteId},${j.createdAt},${j.stepsCount ?? ''},${j.stepsType ?? ''},${j.poleBrand ?? ''},${j.poleWeight ?? ''},${j.poleLength ?? ''},${j.gripInches ?? ''},${j.gripUnit ?? ''},${j.takeoffInches ?? ''},${j.takeoffUnit ?? ''},${j.barHeightInches ?? ''},${j.barHeightUnit ?? ''},${j.standardsInches ?? ''},${j.standardsUnit ?? ''},${j.approachInches ?? ''},${j.approachUnit ?? ''},${j.coachMarkType ?? ''},${j.coachMarkInches ?? ''},${j.coachMarkUnit ?? ''},${j.coachMarkStep ?? ''},${j.hitCoachMark ?? ''},${j.hitTakeoffStep ?? ''},${j.result ?? ''},"${notesEscaped}"`);
         });
         const csvStr = lines.join('\n');
         const blob = new Blob([csvStr], { type: 'text/csv' });
@@ -249,7 +316,7 @@
         const wsAthletes = XLSX.utils.json_to_sheet(athleteRows);
         XLSX.utils.book_append_sheet(wb, wsAthletes, 'Athletes');
         // Jumps sheet
-        const jumpRows = data.jumps.map(j => ({
+            const jumpRows = data.jumps.map(j => ({
             jump_id: j.id,
             athlete_id: j.athleteId,
             created_at: j.createdAt,
@@ -266,6 +333,14 @@
             bar_height_unit: j.barHeightUnit ?? '',
             standards_inches: j.standardsInches ?? '',
             standards_unit: j.standardsUnit ?? '',
+            approach_inches: j.approachInches ?? '',
+            approach_unit: j.approachUnit ?? '',
+            coach_mark_type: j.coachMarkType ?? '',
+            coach_mark_inches: j.coachMarkInches ?? '',
+            coach_mark_unit: j.coachMarkUnit ?? '',
+            coach_mark_step: j.coachMarkStep ?? '',
+            hit_coach_mark: j.hitCoachMark ?? '',
+            hit_takeoff_step: j.hitTakeoffStep ?? '',
             result: j.result ?? '',
             notes: j.notes ?? ''
         }));
@@ -573,6 +648,61 @@
                     barInchesRemVal = parseFloat(conv.inches.toFixed(1));
                 }
             }
+            // Prefill approach mark
+            const approachUnitVal = lastJump?.approachUnit ?? settings.approachUnit;
+            const approachInchesVal = lastJump?.approachInches != null ? parseFloat(lastJump.approachInches) : null;
+            let approachFeetVal = '';
+            let approachInchesRemVal = '';
+            let approachMetersVal = '';
+            if (approachInchesVal !== null) {
+                if (approachUnitVal === 'imperial') {
+                    const conv = inchesToFeetInches(approachInchesVal);
+                    approachFeetVal = conv.feet;
+                    approachInchesRemVal = Math.round(conv.inches); // whole inches
+                    approachMetersVal = (approachInchesVal / 39.3701).toFixed(2);
+                } else {
+                    approachMetersVal = (approachInchesVal / 39.3701).toFixed(2);
+                    const conv = inchesToFeetInches(approachInchesVal);
+                    approachFeetVal = conv.feet;
+                    approachInchesRemVal = Math.round(conv.inches);
+                }
+            }
+            // Prefill coach's mark
+            const enableCoachMark = settings.enableCoachMark;
+            const coachMarkTypeVal = settings.coachMarkType;
+            const coachMarkUnitVal = settings.coachMarkUnit;
+            const lastCoachDistance = lastJump?.coachMarkInches != null ? parseFloat(lastJump.coachMarkInches) : null;
+            const lastCoachStep = lastJump?.coachMarkStep != null ? parseInt(lastJump.coachMarkStep, 10) : null;
+            let coachFeetVal = '';
+            let coachInchesRemVal = '';
+            let coachMetersVal = '';
+            let coachStepVal = '';
+            let hitCoachMarkVal = lastJump?.hitCoachMark ?? false;
+            if (enableCoachMark) {
+                if (coachMarkTypeVal === 'distance') {
+                    if (lastCoachDistance != null) {
+                        if (coachMarkUnitVal === 'imperial') {
+                            const conv = inchesToFeetInches(lastCoachDistance);
+                            coachFeetVal = conv.feet;
+                            coachInchesRemVal = Math.round(conv.inches);
+                            coachMetersVal = (lastCoachDistance / 39.3701).toFixed(2);
+                        } else {
+                            coachMetersVal = (lastCoachDistance / 39.3701).toFixed(2);
+                            const conv = inchesToFeetInches(lastCoachDistance);
+                            coachFeetVal = conv.feet;
+                            coachInchesRemVal = Math.round(conv.inches);
+                        }
+                    }
+                } else {
+                    if (lastCoachStep != null) {
+                        coachStepVal = lastCoachStep;
+                    }
+                }
+            }
+            // Prefill takeoff step check
+            const enableTakeoffStepCheck = settings.enableTakeoffStepCheck;
+            let hitTakeoffStepVal = lastJump?.hitTakeoffStep ?? false;
+
             // Prefill standards
             const standardsUnitVal = lastJump?.standardsUnit ?? settings.standardsUnit;
             const standardsInchesVal = lastJump?.standardsInches ? parseFloat(lastJump.standardsInches) : null;
@@ -658,6 +788,46 @@
                             `}
                         </div>
                     </label>
+                </div>
+                <!-- Approach mark input -->
+                <div class="field-group">
+                    <label>Approach Mark
+                        <div class="field-row">
+                            ${approachUnitVal === 'imperial' ? `
+                                <input type="number" id="approachFeet" class="field-number" value="${approachFeetVal}" min="0" step="1">
+                                <input type="number" id="approachInchesInput" class="field-number" value="${approachInchesRemVal}" min="0" step="1">
+                                <span class="unit-pill">ft/in</span>
+                            ` : `
+                                <input type="number" id="approachMeters" class="field-number" value="${approachMetersVal}" min="0" step="0.01">
+                                <span class="unit-pill">m</span>
+                            `}
+                        </div>
+                    </label>
+                </div>
+                <!-- Coach's mark input (conditional) -->
+                <div class="field-group" id="coachMarkGroup" style="display:${enableCoachMark ? 'block' : 'none'};">
+                    <label>Coach's Mark
+                        <div class="field-row">
+                            ${enableCoachMark && coachMarkTypeVal === 'distance' ? `
+                                ${coachMarkUnitVal === 'imperial' ? `
+                                    <input type="number" id="coachFeet" class="field-number" value="${coachFeetVal}" min="0" step="1">
+                                    <input type="number" id="coachInchesInput" class="field-number" value="${coachInchesRemVal}" min="0" step="1">
+                                    <span class="unit-pill">ft/in</span>
+                                ` : `
+                                    <input type="number" id="coachMeters" class="field-number" value="${coachMetersVal}" min="0" step="0.01">
+                                    <span class="unit-pill">m</span>
+                                `}
+                            ` : `
+                                <input type="number" id="coachStep" class="field-number" value="${coachStepVal}" min="0" step="1">
+                                <span class="unit-pill">steps</span>
+                            `}
+                        </div>
+                    </label>
+                    <label style="margin-top:4px;"><input type="checkbox" id="hitCoachMark" ${hitCoachMarkVal ? 'checked' : ''}> Hit coach's mark</label>
+                </div>
+                <!-- Takeoff step hit check (conditional) -->
+                <div class="field-group" id="takeoffStepGroup" style="display:${enableTakeoffStepCheck ? 'block' : 'none'};">
+                    <label><input type="checkbox" id="hitTakeoffStep" ${hitTakeoffStepVal ? 'checked' : ''}> Hit takeoff step</label>
                 </div>
                 <div class="field-group">
                     <label>Standards
@@ -833,6 +1003,52 @@
                     standardsInchesCalc = standardsVal;
                 }
                 const notes = form.querySelector('#notes').value || '';
+                // Approach mark calculation
+                let approachInchesCalc = null;
+                let approachMetersInput, approachFeetInput, approachInchesInput;
+                if (approachUnitVal === 'imperial') {
+                    const feetVal = parseFloat(form.querySelector('#approachFeet').value) || 0;
+                    const inchVal = parseFloat(form.querySelector('#approachInchesInput').value) || 0;
+                    approachInchesCalc = feetVal * 12 + inchVal;
+                } else {
+                    const mVal = parseFloat(form.querySelector('#approachMeters').value) || 0;
+                    approachInchesCalc = mVal * 39.3701;
+                }
+                // Coach mark calculation
+                let coachMarkInchesCalc = null;
+                let coachMarkStepCalc = null;
+                let hitCoachMark = false;
+                if (enableCoachMark) {
+                    hitCoachMark = form.querySelector('#hitCoachMark').checked;
+                    if (coachMarkTypeVal === 'distance') {
+                        if (coachMarkUnitVal === 'imperial') {
+                            const feetVal = parseFloat(form.querySelector('#coachFeet').value) || 0;
+                            const inchVal = parseFloat(form.querySelector('#coachInchesInput').value) || 0;
+                            coachMarkInchesCalc = feetVal * 12 + inchVal;
+                        } else {
+                            const mVal = parseFloat(form.querySelector('#coachMeters').value) || 0;
+                            coachMarkInchesCalc = mVal * 39.3701;
+                        }
+                        // Hard constraint: coach distance must be less than approach
+                        if (approachInchesCalc != null && coachMarkInchesCalc >= approachInchesCalc) {
+                            alert("Coach's mark must be less than approach mark distance.");
+                            return;
+                        }
+                    } else {
+                        // step type
+                        coachMarkStepCalc = parseInt(form.querySelector('#coachStep').value, 10) || 0;
+                        const totalStepsCount = stepsCount === '' ? null : parseInt(stepsCount, 10);
+                        if (totalStepsCount != null && coachMarkStepCalc >= totalStepsCount) {
+                            alert("Coach's mark step must be less than total steps.");
+                            return;
+                        }
+                    }
+                }
+                // Takeoff step hit
+                let hitTakeoffStep = false;
+                if (enableTakeoffStepCheck) {
+                    hitTakeoffStep = form.querySelector('#hitTakeoffStep').checked;
+                }
                 const jumpData = {
                     stepsCount: stepsCount === '' ? null : parseInt(stepsCount, 10),
                     stepsType,
@@ -848,7 +1064,16 @@
                     standardsInches: parseFloat(standardsInchesCalc.toFixed(2)),
                     standardsUnit,
                     result: selectedResult,
-                    notes
+                    notes,
+                    // New fields
+                    approachInches: approachInchesCalc !== null ? parseFloat(approachInchesCalc.toFixed(2)) : null,
+                    approachUnit: approachUnitVal,
+                    coachMarkType: enableCoachMark ? coachMarkTypeVal : null,
+                    coachMarkInches: enableCoachMark && coachMarkTypeVal === 'distance' && coachMarkInchesCalc !== null ? parseFloat(coachMarkInchesCalc.toFixed(2)) : null,
+                    coachMarkUnit: enableCoachMark && coachMarkTypeVal === 'distance' ? coachMarkUnitVal : null,
+                    coachMarkStep: enableCoachMark && coachMarkTypeVal === 'step' ? coachMarkStepCalc : null,
+                    hitCoachMark: enableCoachMark ? hitCoachMark : null,
+                    hitTakeoffStep: enableTakeoffStepCheck ? hitTakeoffStep : null
                 };
                 Storage.addJump(athlete.id, jumpData);
                 renderAthleteDetailScreen(athlete.id);
@@ -959,6 +1184,48 @@
                 addItem('Standards', standardsDisplay);
             } else {
                 addItem('Standards', '');
+            }
+            // Approach mark display
+            if (jump.approachInches != null) {
+                let approachDisplay;
+                if (jump.approachUnit === 'metric') {
+                    const m = (jump.approachInches / 39.3701).toFixed(2);
+                    approachDisplay = `${m} m`;
+                } else {
+                    const total = parseFloat(jump.approachInches);
+                    const ft = Math.floor(total / 12);
+                    const inch = Math.round(total - ft * 12);
+                    approachDisplay = `${ft}' ${inch}"`;
+                }
+                addItem('Approach Mark', approachDisplay);
+            }
+            // Coach mark display
+            if (jump.coachMarkType) {
+                let coachDisplay = '';
+                if (jump.coachMarkType === 'distance' && jump.coachMarkInches != null) {
+                    if (jump.coachMarkUnit === 'metric') {
+                        const m = (jump.coachMarkInches / 39.3701).toFixed(2);
+                        coachDisplay = `${m} m`;
+                    } else {
+                        const total = parseFloat(jump.coachMarkInches);
+                        const ft = Math.floor(total / 12);
+                        const inch = Math.round(total - ft * 12);
+                        coachDisplay = `${ft}' ${inch}"`;
+                    }
+                } else if (jump.coachMarkType === 'step' && jump.coachMarkStep != null) {
+                    coachDisplay = `${jump.coachMarkStep} steps`;
+                }
+                if (coachDisplay) {
+                    addItem("Coach's Mark", coachDisplay);
+                }
+                // Hit coach mark
+                if (jump.hitCoachMark != null) {
+                    addItem("Hit Coach's Mark", jump.hitCoachMark ? 'Yes' : 'No');
+                }
+            }
+            // Takeoff step hit display
+            if (jump.hitTakeoffStep != null) {
+                addItem('Hit Takeoff Step', jump.hitTakeoffStep ? 'Yes' : 'No');
             }
             // Bar height display
             if (jump.barHeightInches != null) {
