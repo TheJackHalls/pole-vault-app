@@ -6,9 +6,9 @@
  * background sync and more complex caching strategies.
  */
 
-// Updated cache name for Taykof v0.6.0. Increment this value whenever
+// Updated cache name for Taykof v0.7.0. Increment this value whenever
 // making changes to the cached files so the service worker picks up the new assets.
-const CACHE_NAME = 'taykof-cache-v1';
+const CACHE_NAME = 'taykof-cache-v2';
 /*
  * Determine the base path for caching resources. When deployed under a
  * subpath (e.g. GitHub Pages), the service worker will be located at

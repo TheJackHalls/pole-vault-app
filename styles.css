@@ -2,10 +2,10 @@
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    /* Dark charcoal background with neon green accents */
-    background-color: #0d1321;
+    /* Soft dark slate background with muted text. Accent color is used sparingly. */
+    background-color: #0f172a;
     color: #e5e5e5;
-    padding-bottom: 60px; /* space for export button */
+    padding-bottom: 16px; /* reduced bottom padding since export button is removed */
 }
 
 #app {
@@ -32,7 +32,7 @@ h1, h2, h3 {
 }
 
 .list-item {
-    background-color: #162039;
+    background-color: #111a2b;
     margin-bottom: 10px;
     padding: 12px;
     border-radius: 8px;
@@ -46,13 +46,13 @@ h1, h2, h3 {
     background: none;
     border: none;
     font-size: 16px;
-    color: #39ff14;
+    color: #4ade80;
     cursor: pointer;
 }
 
 .button-primary {
-    background-color: #39ff14;
-    color: #0d1321;
+    background-color: #4ade80;
+    color: #0f172a;
     border: none;
     padding: 12px 20px;
     font-size: 16px;
@@ -63,7 +63,7 @@ h1, h2, h3 {
 }
 
 .button-primary:active {
-    background-color: #2ecc0a;
+    background-color: #3fcf7f;
 }
 
 /* Form styles */
@@ -80,10 +80,10 @@ label {
 input, select, textarea {
     padding: 10px;
     margin-top: 4px;
-    border: 1px solid #334060;
+    border: 1px solid #243045;
     border-radius: 4px;
     font-size: 16px;
-    background-color: #162039;
+    background-color: #111a2b;
     color: #e5e5e5;
 }
 
@@ -111,8 +111,8 @@ textarea {
 /* Highlight the selected result button */
 .result-buttons button.selected {
     /* Make the selected result button stand out more */
-    border: 3px solid #39ff14;
-    box-shadow: 0 0 6px rgba(57, 255, 20, 0.5);
+    border: 3px solid #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
     filter: brightness(1.1);
 }
 
@@ -130,8 +130,8 @@ textarea {
 }
 
 .make-btn {
-    background-color: #39ff14;
-    color: #0d1321;
+    background-color: #4ade80;
+    color: #0f172a;
 }
 
 .miss-btn {
@@ -140,7 +140,7 @@ textarea {
 }
 
 .make-btn:active {
-    background-color: #2ecc0a;
+    background-color: #3fcf7f;
 }
 
 .miss-btn:active {
@@ -174,7 +174,7 @@ textarea {
     right: 8px;
     background: none;
     border: none;
-    color: #39ff14;
+    color: #4ade80;
     font-size: 24px;
     cursor: pointer;
     z-index: 200;
@@ -195,7 +195,7 @@ textarea {
 }
 
 .modal {
-    background-color: #0d1321;
+    background-color: #0f172a;
     padding: 20px;
     border-radius: 8px;
     width: 90%;

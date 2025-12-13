@@ -7,6 +7,7 @@
 
 (function() {
     const app = document.getElementById('app');
+    // exportBtn element may not exist because export is now accessed via Settings.
     const exportBtn = document.getElementById('exportBtn');
     // Settings storage key for Taykof defaults
     const SETTINGS_KEY = 'taykof_settings_v1';
@@ -993,11 +994,13 @@
         });
     }
 
-    // Export data button handler
-    exportBtn.addEventListener('click', () => {
-        // Show export options modal instead of immediate JSON download
-        renderExportModal();
-    });
+    // Export data button handler (legacy). If exportBtn exists (older versions), open export modal.
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            // Show export options modal instead of immediate JSON download
+            renderExportModal();
+        });
+    }
 
     // Kick off the app by rendering the athletes list
     navigate(renderAthletesList);
