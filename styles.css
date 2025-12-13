@@ -1,0 +1,164 @@
+/* Global styles */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    padding-bottom: 60px; /* space for export button */
+}
+
+#app {
+    padding: 16px;
+}
+
+h1, h2, h3 {
+    margin: 0 0 8px;
+}
+
+.screen {
+    display: none;
+}
+
+.active {
+    display: block;
+}
+
+/* List styles */
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.list-item {
+    background-color: #fff;
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.list-item button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #003366;
+    cursor: pointer;
+}
+
+.button-primary {
+    background-color: #003366;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    width: 100%;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.button-primary:active {
+    background-color: #001f3f;
+}
+
+/* Form styles */
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+input, select, textarea {
+    padding: 10px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+textarea {
+    min-height: 80px;
+}
+
+/* New Jump make/miss buttons */
+.result-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.result-buttons button {
+    flex: 1;
+    padding: 16px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* Highlight the selected result button */
+.result-buttons button.selected {
+    /* Make the selected result button stand out more */
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+    filter: brightness(1.1);
+}
+
+/* Field grouping for better spacing */
+.field-group {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+}
+
+/* Unit groups for metric/imperial fields */
+.unit-group label {
+    display: flex;
+    flex-direction: column;
+}
+
+.make-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.miss-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.make-btn:active {
+    background-color: #218838;
+}
+
+.miss-btn:active {
+    background-color: #c82333;
+}
+
+/* Export button fixed at bottom */
+.export-btn {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    background-color: #003366;
+    color: white;
+    border: none;
+    z-index: 100;
+    cursor: pointer;
+}
+
+.export-btn:active {
+    background-color: #001f3f;
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Pole Vault Coach",
+  "short_name": "PV Coach",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#003366",
+  "theme_color": "#003366",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
