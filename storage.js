@@ -111,6 +111,12 @@
     getByAthlete(athleteId) {
       return readJumps().filter((jump) => jump.athleteId === athleteId);
     },
+    remove(id) {
+      const jumps = readJumps();
+      const filtered = jumps.filter((jump) => jump.id !== id);
+      writeJumps(filtered);
+      return filtered;
+    },
     add({ athleteId, date, bar, result, note }) {
       const trimmedBar = (bar || '').trim();
       const trimmedNote = (note || '').trim();
