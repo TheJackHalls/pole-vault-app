@@ -25,6 +25,7 @@
   const logDateInput = document.getElementById('log-date');
   const logBarInput = document.getElementById('log-bar');
   const logResultInputs = document.querySelectorAll('input[name="log-result"]');
+  const logSessionTypeInputs = document.querySelectorAll('input[name="log-session-type"]');
   const logNoteInput = document.getElementById('log-note');
   const logError = document.getElementById('log-error');
   const logList = document.getElementById('jump-log');
@@ -227,6 +228,11 @@
     return selected ? selected.value : null;
   }
 
+  function getSelectedSessionType() {
+    const selected = Array.from(logSessionTypeInputs).find((input) => input.checked);
+    return selected ? selected.value : 'practice';
+  }
+
   function getAthleteNameMap() {
     return AthleteStore.getAll().reduce((acc, athlete) => {
       acc[athlete.id] = athlete.name;
@@ -363,16 +369,27 @@
         const meta = document.createElement('div');
         meta.className = 'meta';
 
+        const headingRow = document.createElement('div');
+        headingRow.className = 'heading-row';
+
         const heading = document.createElement('p');
         heading.className = 'title';
         const athleteName = athletesById[jump.athleteId] || 'Unknown athlete';
         heading.textContent = `${athleteName} · ${formatBarForDisplay(jump)}`;
 
+        const sessionType = jump.sessionType === 'competition' ? 'competition' : 'practice';
+        const sessionTag = document.createElement('span');
+        sessionTag.className = `session-tag ${sessionType === 'competition' ? 'session-competition' : 'session-practice'}`;
+        sessionTag.textContent = sessionType === 'competition' ? 'Competition' : 'Practice';
+
+        headingRow.appendChild(heading);
+        headingRow.appendChild(sessionTag);
+
         const note = document.createElement('p');
         note.className = 'note';
         note.textContent = jump.note || '—';
 
-        meta.appendChild(heading);
+        meta.appendChild(headingRow);
         meta.appendChild(note);
 
         const badge = document.createElement('span');
@@ -414,6 +431,7 @@
     const date = logDateInput.value;
     const barRaw = logBarInput.value;
     const result = getSelectedResult();
+    const sessionType = getSelectedSessionType();
     const note = logNoteInput.value;
     const unitMode = getUnitMode();
     const barValueCm = parseBarHeight(barRaw, unitMode);
@@ -443,6 +461,7 @@
       barValueCm,
       barUnitMode: unitMode,
       result,
+      sessionType,
       note,
     });
     if (!saved) {
