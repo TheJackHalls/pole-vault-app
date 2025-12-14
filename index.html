@@ -9,38 +9,82 @@
 </head>
 <body>
   <main class="container">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">Taykof</p>
-        <h1>Athletes</h1>
-        <p class="subtitle">Add each athlete you coach. Names are required; short notes are optional.</p>
-      </div>
-    </header>
+    <section id="athletes-screen" class="screen active">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Taykof</p>
+          <h1>Athletes</h1>
+          <p class="subtitle">Add each athlete you coach. Names are required; select sex for quick reference.</p>
+        </div>
+      </header>
 
-    <section class="card">
-      <form id="athlete-form" novalidate>
-        <label class="field" for="athlete-name">
-          <span>Name *</span>
-          <input id="athlete-name" name="name" type="text" required maxlength="80" placeholder="e.g., Casey Morris">
-        </label>
-        <label class="field" for="athlete-note">
-          <span>Descriptor (optional)</span>
-          <input id="athlete-note" name="note" type="text" maxlength="120" placeholder="e.g., Junior, left-handed">
-        </label>
-        <p id="form-error" class="form-error" role="alert"></p>
-        <button class="primary-btn" type="submit">Add athlete</button>
-      </form>
+      <section class="card">
+        <form id="athlete-form" novalidate>
+          <label class="field" for="athlete-name">
+            <span>Name *</span>
+            <input id="athlete-name" name="name" type="text" required maxlength="80" placeholder="e.g., Casey Morris">
+          </label>
+          <label class="field" for="athlete-sex">
+            <span>Sex</span>
+            <select id="athlete-sex" name="sex">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </label>
+          <p id="form-error" class="form-error" role="alert"></p>
+          <button class="primary-btn" type="submit">Add athlete</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>Saved athletes</h2>
+          <p class="subtitle">Stored locally on this device.</p>
+        </div>
+        <ul id="athlete-list" class="athlete-list" aria-live="polite"></ul>
+        <p id="empty-state" class="empty-state">No athletes yet. Add your first athlete above.</p>
+      </section>
     </section>
 
-    <section class="card">
-      <div class="section-heading">
-        <h2>Saved athletes</h2>
-        <p class="subtitle">Stored locally on this device.</p>
-      </div>
-      <ul id="athlete-list" class="athlete-list" aria-live="polite"></ul>
-      <p id="empty-state" class="empty-state">No athletes yet. Add your first athlete above.</p>
+    <section id="athlete-detail-screen" class="screen">
+      <header class="page-header detail-header">
+        <button class="ghost-btn" id="back-to-athletes" type="button" aria-label="Back to Athletes">← Athletes</button>
+        <div>
+          <p class="eyebrow">Athlete</p>
+          <h1 id="detail-name"></h1>
+          <p class="subtitle" id="detail-sex"></p>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="field">
+          <span>Personal Record (PR)</span>
+          <input id="detail-pr" type="text" placeholder="Enter PR (e.g., 12' 6&quot;)">
+        </div>
+        <button class="primary-btn" id="view-log" type="button">View jump log</button>
+      </section>
+    </section>
+
+    <section id="placeholder-screen" class="screen">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow" id="placeholder-eyebrow">Coming soon</p>
+          <h1 id="placeholder-title">Coming soon</h1>
+          <p class="subtitle" id="placeholder-subtitle">This area is being built. Check back soon.</p>
+        </div>
+      </header>
+      <section class="card">
+        <p class="empty-state" id="placeholder-body">We are working on this feature. It will show up here once ready.</p>
+      </section>
     </section>
   </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-target="athletes-screen" type="button">Athletes</button>
+    <button class="nav-item" data-target="log" type="button">Log</button>
+    <button class="nav-item" data-target="poles" type="button">Poles</button>
+    <button class="nav-item" data-target="settings" type="button">Settings</button>
+  </nav>
 
   <script src="storage.js"></script>
   <script src="app.js"></script>

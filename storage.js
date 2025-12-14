@@ -1,12 +1,24 @@
 (function () {
   const STORAGE_KEY = 'taykof_athletes_v1';
 
+  function normalizeAthlete(raw) {
+    return {
+      id: raw.id,
+      name: raw.name,
+      sex: raw.sex || 'Not set',
+      note: raw.note || '',
+      pr: raw.pr || '',
+      createdAt: raw.createdAt || Date.now(),
+    };
+  }
+
   function read() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return [];
     try {
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(normalizeAthlete);
     } catch (err) {
       console.error('Could not read saved athletes', err);
       return [];
@@ -25,20 +37,34 @@
     getAll() {
       return read();
     },
-    add({ name, note }) {
+    getById(id) {
+      return read().find((athlete) => athlete.id === id) || null;
+    },
+    add({ name, sex }) {
       const trimmedName = name.trim();
-      const trimmedNote = note.trim();
+      const normalizedSex = sex || 'Not set';
       if (!trimmedName) return null;
       const athletes = read();
       const athlete = {
         id: createId(),
         name: trimmedName,
-        note: trimmedNote,
+        sex: normalizedSex,
+        note: '',
+        pr: '',
         createdAt: Date.now(),
       };
       athletes.push(athlete);
       write(athletes);
       return athlete;
+    },
+    update(id, updates) {
+      const athletes = read();
+      const updated = athletes.map((athlete) => {
+        if (athlete.id !== id) return athlete;
+        return { ...athlete, ...updates };
+      });
+      write(updated);
+      return this.getById(id);
     },
     remove(id) {
       const athletes = read();
