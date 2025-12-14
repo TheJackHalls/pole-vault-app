@@ -297,7 +297,7 @@
       const totalInches = jump.barValueCm / 2.54;
       const feet = Math.floor(totalInches / 12);
       const inches = totalInches - feet * 12;
-      const roundedInches = Math.round(inches * 100) / 100;
+      const roundedInches = Math.round(inches * 4) / 4;
       const inchLabel = Number.isInteger(roundedInches)
         ? `${roundedInches}`
         : `${roundedInches.toFixed(2)}`;
