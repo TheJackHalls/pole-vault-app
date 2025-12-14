@@ -30,6 +30,8 @@
   const logList = document.getElementById('jump-log');
   const logEmpty = document.getElementById('jump-log-empty');
   const logFilterSelect = document.getElementById('log-filter');
+  const unitModeInputs = document.querySelectorAll('input[name="settings-units"]');
+  const barHelper = document.getElementById('bar-helper');
 
   let currentAthleteId = null;
 
@@ -39,12 +41,31 @@
       subtitle: 'Pole bag planning is coming soon.',
       body: 'Organize poles, labels, and recommendations in one spot.',
     },
-    settings: {
-      title: 'Settings',
-      subtitle: 'Set preferences once we add them.',
-      body: 'Options for sync, backup, and device preferences will live here.',
-    },
   };
+
+  function getUnitMode() {
+    return SettingsStore.getUnitMode();
+  }
+
+  function updateBarPlaceholder() {
+    const unitMode = getUnitMode();
+    if (!logBarInput || !barHelper) return;
+    if (unitMode === 'metric') {
+      logBarInput.placeholder = 'e.g., 3.50 m';
+      barHelper.textContent = 'Metric: meters or centimeters (e.g., 3.50 m or 350 cm)';
+      return;
+    }
+    logBarInput.placeholder = "e.g., 11' 6\"";
+    barHelper.textContent = 'Imperial: feet and inches (e.g., 11\' 6\" or 11-6)';
+  }
+
+  function setUnitSelection(mode) {
+    unitModeInputs.forEach((input) => {
+      input.checked = input.value === mode;
+    });
+    updateBarPlaceholder();
+    renderJumpLog();
+  }
 
   function setActiveScreen(screenId) {
     screens.forEach((screen) => screen.classList.remove('active'));
@@ -213,6 +234,79 @@
     }, {});
   }
 
+  function parseImperialBar(raw) {
+    const normalized = raw
+      .trim()
+      .toLowerCase()
+      .replace(/feet|foot|ft/g, "'")
+      .replace(/inches|inch|in/g, '"')
+      .replace(/[’]/g, "'")
+      .replace(/[”″]/g, '"');
+
+    const explicit = normalized.match(/(\d+(?:\.\d+)?)\s*'\s*(\d+(?:\.\d+)?)/);
+    let feet;
+    let inches;
+
+    if (explicit) {
+      feet = parseFloat(explicit[1]);
+      inches = parseFloat(explicit[2]);
+    } else {
+      const tokens = normalized.split(/[^0-9.]+/).filter(Boolean);
+      if (tokens.length >= 2) {
+        feet = parseFloat(tokens[0]);
+        inches = parseFloat(tokens[1]);
+      }
+    }
+
+    if (!Number.isFinite(feet) || !Number.isFinite(inches)) return null;
+
+    return (feet * 12 + inches) * 2.54;
+  }
+
+  function parseMetricBar(raw) {
+    const normalized = raw.trim().toLowerCase();
+    const numberMatch = normalized.match(/-?\d*\.?\d+/);
+    if (!numberMatch) return null;
+    const value = parseFloat(numberMatch[0]);
+    if (!Number.isFinite(value)) return null;
+
+    const hasCm = normalized.includes('cm');
+    const hasM = normalized.includes('m');
+
+    if (hasCm || (!hasM && value >= 10)) {
+      return value;
+    }
+
+    return value * 100;
+  }
+
+  function parseBarHeight(raw, unitMode) {
+    if (!raw.trim()) return null;
+    if (unitMode === 'metric') return parseMetricBar(raw);
+    return parseImperialBar(raw);
+  }
+
+  function formatBarForDisplay(jump) {
+    const unitMode = getUnitMode();
+    if (Number.isFinite(jump.barValueCm)) {
+      if (unitMode === 'metric') {
+        const meters = jump.barValueCm / 100;
+        return `${meters.toFixed(2)} m`;
+      }
+
+      const totalInches = jump.barValueCm / 2.54;
+      const feet = Math.floor(totalInches / 12);
+      const inches = totalInches - feet * 12;
+      const roundedInches = Math.round(inches * 4) / 4;
+      const inchLabel = Number.isInteger(roundedInches)
+        ? `${roundedInches}`
+        : `${roundedInches.toFixed(2)}`;
+      return `${feet}' ${inchLabel}"`;
+    }
+
+    return jump.barRaw || jump.bar || '—';
+  }
+
   function renderJumpLog() {
     const filterId = logFilterSelect.value || 'all';
     const allJumps = filterId === 'all' ? JumpStore.getAll() : JumpStore.getByAthlete(filterId);
@@ -272,7 +366,7 @@
         const heading = document.createElement('p');
         heading.className = 'title';
         const athleteName = athletesById[jump.athleteId] || 'Unknown athlete';
-        heading.textContent = `${athleteName} · ${jump.bar}`;
+        heading.textContent = `${athleteName} · ${formatBarForDisplay(jump)}`;
 
         const note = document.createElement('p');
         note.className = 'note';
@@ -318,9 +412,11 @@
     event.preventDefault();
     const athleteId = logAthleteSelect.value;
     const date = logDateInput.value;
-    const bar = logBarInput.value;
+    const barRaw = logBarInput.value;
     const result = getSelectedResult();
     const note = logNoteInput.value;
+    const unitMode = getUnitMode();
+    const barValueCm = parseBarHeight(barRaw, unitMode);
 
     if (!athleteId) {
       logError.textContent = 'Choose an athlete to log a jump.';
@@ -334,13 +430,21 @@
       return;
     }
 
-    if (!bar.trim()) {
+    if (!barRaw.trim()) {
       logError.textContent = 'Enter the bar height hit or attempted.';
       logBarInput.focus();
       return;
     }
 
-    const saved = JumpStore.add({ athleteId, date, bar, result, note });
+    const saved = JumpStore.add({
+      athleteId,
+      date,
+      barRaw,
+      barValueCm,
+      barUnitMode: unitMode,
+      result,
+      note,
+    });
     if (!saved) {
       logError.textContent = 'Unable to save jump. Please try again.';
       return;
@@ -371,8 +475,25 @@
           return;
         }
 
+        if (target === 'settings') {
+          setActiveScreen('settings-screen');
+          setNavActive('settings');
+          return;
+        }
+
         setNavActive(target);
         showPlaceholder(target);
+      });
+    });
+  }
+
+  function setupSettings() {
+    const savedMode = getUnitMode();
+    setUnitSelection(savedMode);
+
+    unitModeInputs.forEach((input) => {
+      input.addEventListener('change', (event) => {
+        setUnitSelection(event.target.value);
       });
     });
   }
@@ -401,6 +522,7 @@
     logFilterSelect.addEventListener('change', renderJumpLog);
   }
 
+  setupSettings();
   form.addEventListener('submit', handleSubmit);
   setupNav();
   setupDetailActions();
