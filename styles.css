@@ -308,6 +308,13 @@ body {
   min-width: 0;
 }
 
+.log-entry .heading-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .log-entry .title {
   margin: 0;
   font-weight: 700;
@@ -337,6 +344,28 @@ body {
   padding: 8px 10px;
   border-radius: 10px;
   cursor: pointer;
+}
+
+.session-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.session-competition {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.session-practice {
+  background: #e0f2fe;
+  color: #075985;
 }
 
 .result-make {

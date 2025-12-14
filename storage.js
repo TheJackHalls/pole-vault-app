@@ -46,6 +46,7 @@
       barValueCm: Number.isFinite(storedBarValue) ? storedBarValue : null,
       barUnitMode: raw.barUnitMode === 'metric' ? 'metric' : 'imperial',
       result: raw.result === 'miss' ? 'miss' : 'make',
+      sessionType: raw.sessionType === 'competition' ? 'competition' : 'practice',
       note: raw.note || '',
       createdAt: raw.createdAt || Date.now(),
     };
@@ -122,7 +123,7 @@
       writeJumps(filtered);
       return filtered;
     },
-    add({ athleteId, date, barRaw, barValueCm, barUnitMode, result, note }) {
+    add({ athleteId, date, barRaw, barValueCm, barUnitMode, result, sessionType, note }) {
       const trimmedBar = (barRaw || '').trim();
       const trimmedNote = (note || '').trim();
       if (!athleteId || !date || !trimmedBar || !result) return null;
@@ -136,6 +137,7 @@
         barValueCm: Number.isFinite(barValueCm) ? barValueCm : null,
         barUnitMode: barUnitMode === 'metric' ? 'metric' : 'imperial',
         result: result === 'miss' ? 'miss' : 'make',
+        sessionType: sessionType === 'competition' ? 'competition' : 'practice',
         note: trimmedNote,
         createdAt: Date.now(),
       };
