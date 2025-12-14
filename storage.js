@@ -37,6 +37,17 @@
 
   function normalizeJump(raw) {
     const storedBarValue = Number(raw.barValueCm);
+    const rawSessionType = raw.sessionType;
+    const sessionType = rawSessionType === 'competition' ? 'competition' : 'practice';
+    const hasBarUp = typeof raw.barUp === 'boolean';
+    const barUp = hasBarUp
+      ? raw.barUp
+      : rawSessionType === 'practice'
+        ? false
+        : sessionType === 'competition'
+          ? true
+          : true;
+
     return {
       id: raw.id,
       athleteId: raw.athleteId,
@@ -46,7 +57,8 @@
       barValueCm: Number.isFinite(storedBarValue) ? storedBarValue : null,
       barUnitMode: raw.barUnitMode === 'metric' ? 'metric' : 'imperial',
       result: raw.result === 'miss' ? 'miss' : 'make',
-      sessionType: raw.sessionType === 'competition' ? 'competition' : 'practice',
+      sessionType,
+      barUp,
       note: raw.note || '',
       createdAt: raw.createdAt || Date.now(),
     };
@@ -123,21 +135,26 @@
       writeJumps(filtered);
       return filtered;
     },
-    add({ athleteId, date, barRaw, barValueCm, barUnitMode, result, sessionType, note }) {
+    add({ athleteId, date, barRaw, barValueCm, barUnitMode, result, sessionType, note, barUp }) {
       const trimmedBar = (barRaw || '').trim();
       const trimmedNote = (note || '').trim();
-      if (!athleteId || !date || !trimmedBar || !result) return null;
+      const normalizedSessionType = sessionType === 'competition' ? 'competition' : 'practice';
+      const normalizedBarUp = typeof barUp === 'boolean' ? barUp : normalizedSessionType === 'competition';
+
+      if (!athleteId || !date || !result) return null;
+      if (normalizedBarUp && !trimmedBar) return null;
 
       const jump = {
         id: createId(),
         athleteId,
         date,
-        bar: trimmedBar,
-        barRaw: trimmedBar,
-        barValueCm: Number.isFinite(barValueCm) ? barValueCm : null,
+        bar: normalizedBarUp ? trimmedBar : '',
+        barRaw: normalizedBarUp ? trimmedBar : '',
+        barValueCm: normalizedBarUp && Number.isFinite(barValueCm) ? barValueCm : null,
         barUnitMode: barUnitMode === 'metric' ? 'metric' : 'imperial',
         result: result === 'miss' ? 'miss' : 'make',
-        sessionType: sessionType === 'competition' ? 'competition' : 'practice',
+        sessionType: normalizedSessionType,
+        barUp: normalizedBarUp,
         note: trimmedNote,
         createdAt: Date.now(),
       };

@@ -26,6 +26,8 @@
   const logBarInput = document.getElementById('log-bar');
   const logResultInputs = document.querySelectorAll('input[name="log-result"]');
   const logSessionTypeInputs = document.querySelectorAll('input[name="log-session-type"]');
+  const logBarUpInputs = document.querySelectorAll('input[name="log-bar-up"]');
+  const logBarUpField = document.getElementById('bar-up-field');
   const logNoteInput = document.getElementById('log-note');
   const logError = document.getElementById('log-error');
   const logList = document.getElementById('jump-log');
@@ -233,6 +235,11 @@
     return selected ? selected.value : 'practice';
   }
 
+  function getSelectedBarUp() {
+    const selected = Array.from(logBarUpInputs).find((input) => input.checked);
+    return selected ? selected.value === 'yes' : null;
+  }
+
   function getAthleteNameMap() {
     return AthleteStore.getAll().reduce((acc, athlete) => {
       acc[athlete.id] = athlete.name;
@@ -293,6 +300,9 @@
   }
 
   function formatBarForDisplay(jump) {
+    if (jump.barUp === false) {
+      return 'No bar';
+    }
     const unitMode = getUnitMode();
     if (Number.isFinite(jump.barValueCm)) {
       if (unitMode === 'metric') {
@@ -311,6 +321,33 @@
     }
 
     return jump.barRaw || jump.bar || '—';
+  }
+
+  function updateBarControls() {
+    const sessionType = getSelectedSessionType();
+    const isCompetition = sessionType === 'competition';
+    const selectedBarUp = getSelectedBarUp();
+    const barUp = isCompetition ? true : selectedBarUp ?? false;
+
+    if (logBarUpField) {
+      logBarUpField.style.display = isCompetition ? 'none' : '';
+    }
+
+    logBarUpInputs.forEach((input) => {
+      if (isCompetition) {
+        input.checked = input.value === 'yes';
+      }
+      input.disabled = isCompetition;
+    });
+
+    const disableBarInput = !barUp && !isCompetition;
+    logBarInput.disabled = disableBarInput;
+    if (disableBarInput) {
+      logBarInput.value = '';
+      logBarInput.removeAttribute('required');
+    } else {
+      logBarInput.setAttribute('required', 'required');
+    }
   }
 
   function renderJumpLog() {
@@ -431,12 +468,14 @@
     event.preventDefault();
     const athleteId = logAthleteSelect.value;
     const date = logDateInput.value;
-    const barRaw = logBarInput.value;
     const result = getSelectedResult();
     const sessionType = getSelectedSessionType();
+    const isCompetition = sessionType === 'competition';
+    const barUp = isCompetition ? true : getSelectedBarUp() ?? false;
+    const barRaw = barUp ? logBarInput.value : '';
     const note = logNoteInput.value;
     const unitMode = getUnitMode();
-    const barValueCm = parseBarHeight(barRaw, unitMode);
+    const barValueCm = barUp ? parseBarHeight(barRaw, unitMode) : null;
 
     if (!athleteId) {
       logError.textContent = 'Choose an athlete to log a jump.';
@@ -450,7 +489,7 @@
       return;
     }
 
-    if (!barRaw.trim()) {
+    if (barUp && !barRaw.trim()) {
       logError.textContent = 'Enter the bar height hit or attempted.';
       logBarInput.focus();
       return;
@@ -464,6 +503,7 @@
       barUnitMode: unitMode,
       result,
       sessionType,
+      barUp,
       note,
     });
     if (!saved) {
@@ -476,6 +516,7 @@
     setDefaultDate();
     populateAthleteSelect(logAthleteSelect, { selectedId: athleteId });
     logFilterSelect.value = athleteId;
+    updateBarControls();
     renderJumpLog();
   }
 
@@ -541,6 +582,12 @@
   function setupLogActions() {
     logForm.addEventListener('submit', handleLogSubmit);
     logFilterSelect.addEventListener('change', renderJumpLog);
+    logSessionTypeInputs.forEach((input) => {
+      input.addEventListener('change', updateBarControls);
+    });
+    logBarUpInputs.forEach((input) => {
+      input.addEventListener('change', updateBarControls);
+    });
   }
 
   setupSettings();
@@ -550,6 +597,7 @@
   setupLogActions();
   setDefaultDate();
   refreshAthleteSelectors();
+  updateBarControls();
   renderAthletes();
   renderJumpLog();
 })();
