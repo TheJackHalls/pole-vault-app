@@ -1,5 +1,10 @@
 (function () {
   const STORAGE_KEY = 'taykof_athletes_v1';
+  const JUMP_STORAGE_KEY = 'taykof_jumps_v1';
+
+  function createId() {
+    return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  }
 
   function normalizeAthlete(raw) {
     return {
@@ -29,8 +34,33 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
 
-  function createId() {
-    return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  function normalizeJump(raw) {
+    return {
+      id: raw.id,
+      athleteId: raw.athleteId,
+      date: raw.date,
+      bar: raw.bar,
+      result: raw.result === 'miss' ? 'miss' : 'make',
+      note: raw.note || '',
+      createdAt: raw.createdAt || Date.now(),
+    };
+  }
+
+  function readJumps() {
+    const saved = localStorage.getItem(JUMP_STORAGE_KEY);
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(normalizeJump);
+    } catch (err) {
+      console.error('Could not read saved jumps', err);
+      return [];
+    }
+  }
+
+  function writeJumps(list) {
+    localStorage.setItem(JUMP_STORAGE_KEY, JSON.stringify(list));
   }
 
   window.AthleteStore = {
@@ -71,6 +101,35 @@
       const filtered = athletes.filter((athlete) => athlete.id !== id);
       write(filtered);
       return filtered;
+    },
+  };
+
+  window.JumpStore = {
+    getAll() {
+      return readJumps();
+    },
+    getByAthlete(athleteId) {
+      return readJumps().filter((jump) => jump.athleteId === athleteId);
+    },
+    add({ athleteId, date, bar, result, note }) {
+      const trimmedBar = (bar || '').trim();
+      const trimmedNote = (note || '').trim();
+      if (!athleteId || !date || !trimmedBar || !result) return null;
+
+      const jump = {
+        id: createId(),
+        athleteId,
+        date,
+        bar: trimmedBar,
+        result: result === 'miss' ? 'miss' : 'make',
+        note: trimmedNote,
+        createdAt: Date.now(),
+      };
+
+      const jumps = readJumps();
+      jumps.push(jump);
+      writeJumps(jumps);
+      return jump;
     },
   };
 })();

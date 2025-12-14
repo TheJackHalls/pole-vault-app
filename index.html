@@ -65,6 +65,69 @@
       </section>
     </section>
 
+    <section id="log-screen" class="screen">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Log</p>
+          <h1>Jump log</h1>
+          <p class="subtitle">Track attempts by day. Choose an athlete, set the bar, and tap make or miss.</p>
+        </div>
+      </header>
+
+      <section class="card">
+        <form id="log-form" novalidate>
+          <div class="field">
+            <span>Athlete *</span>
+            <select id="log-athlete" required></select>
+          </div>
+          <div class="field-grid">
+            <label class="field" for="log-date">
+              <span>Date *</span>
+              <input id="log-date" type="date" required>
+            </label>
+            <label class="field" for="log-bar">
+              <span>Bar height *</span>
+              <input id="log-bar" type="text" inputmode="text" placeholder="e.g., 11' 6&quot;" required>
+            </label>
+          </div>
+          <div class="field">
+            <span>Result *</span>
+            <div class="result-toggle" role="group" aria-label="Result">
+              <label class="toggle-pill">
+                <input type="radio" name="log-result" value="make" checked>
+                <span>Make</span>
+              </label>
+              <label class="toggle-pill">
+                <input type="radio" name="log-result" value="miss">
+                <span>Miss</span>
+              </label>
+            </div>
+          </div>
+          <label class="field" for="log-note">
+            <span>Note (optional)</span>
+            <input id="log-note" type="text" maxlength="140" placeholder="Quick note about the attempt">
+          </label>
+          <p id="log-error" class="form-error" role="alert"></p>
+          <button class="primary-btn" type="submit">Add jump</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <h2>Recent jumps</h2>
+            <p class="subtitle">Grouped by day. Most recent first.</p>
+          </div>
+          <label class="filter">
+            <span class="sr-only">Filter by athlete</span>
+            <select id="log-filter"></select>
+          </label>
+        </div>
+        <div id="jump-log" class="jump-log" aria-live="polite"></div>
+        <p id="jump-log-empty" class="empty-state">No jumps logged yet. Add the first one above.</p>
+      </section>
+    </section>
+
     <section id="placeholder-screen" class="screen">
       <header class="page-header">
         <div>

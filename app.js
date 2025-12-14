@@ -20,14 +20,20 @@
   const backBtn = document.getElementById('back-to-athletes');
   const viewLogBtn = document.getElementById('view-log');
 
+  const logForm = document.getElementById('log-form');
+  const logAthleteSelect = document.getElementById('log-athlete');
+  const logDateInput = document.getElementById('log-date');
+  const logBarInput = document.getElementById('log-bar');
+  const logResultInputs = document.querySelectorAll('input[name="log-result"]');
+  const logNoteInput = document.getElementById('log-note');
+  const logError = document.getElementById('log-error');
+  const logList = document.getElementById('jump-log');
+  const logEmpty = document.getElementById('jump-log-empty');
+  const logFilterSelect = document.getElementById('log-filter');
+
   let currentAthleteId = null;
 
   const placeholderContent = {
-    log: {
-      title: 'Jump log',
-      subtitle: 'Jump logging is on the way.',
-      body: 'Track attempts, heights, poles, and meet notes right here soon.',
-    },
     poles: {
       title: 'Poles',
       subtitle: 'Pole bag planning is coming soon.',
@@ -37,11 +43,6 @@
       title: 'Settings',
       subtitle: 'Set preferences once we add them.',
       body: 'Options for sync, backup, and device preferences will live here.',
-    },
-    logLink: {
-      title: 'Jump log',
-      subtitle: 'Logging will be available soon.',
-      body: 'This athlete\'s jump log will appear here once the feature is ready.',
     },
   };
 
@@ -60,12 +61,41 @@
   }
 
   function showPlaceholder(type) {
-    const content = placeholderContent[type] || placeholderContent.log;
+    const content = placeholderContent[type] || placeholderContent.settings;
     placeholderEyebrow.textContent = 'Coming soon';
     placeholderTitle.textContent = content.title;
     placeholderSubtitle.textContent = content.subtitle;
     placeholderBody.textContent = content.body;
     setActiveScreen('placeholder-screen');
+  }
+
+  function populateAthleteSelect(selectEl, { includeAll = false, selectedId = null } = {}) {
+    const athletes = AthleteStore.getAll().slice().sort((a, b) => a.name.localeCompare(b.name));
+    const currentValue = selectedId ?? selectEl.value;
+    selectEl.innerHTML = '';
+
+    if (includeAll) {
+      const option = document.createElement('option');
+      option.value = 'all';
+      option.textContent = 'All athletes';
+      selectEl.appendChild(option);
+    }
+
+    athletes.forEach((athlete) => {
+      const option = document.createElement('option');
+      option.value = athlete.id;
+      option.textContent = athlete.name;
+      selectEl.appendChild(option);
+    });
+
+    if (currentValue && Array.from(selectEl.options).some((opt) => opt.value === currentValue)) {
+      selectEl.value = currentValue;
+    }
+  }
+
+  function refreshAthleteSelectors() {
+    populateAthleteSelect(logAthleteSelect);
+    populateAthleteSelect(logFilterSelect, { includeAll: true, selectedId: logFilterSelect.value || 'all' });
   }
 
   function renderAthletes() {
@@ -74,6 +104,7 @@
 
     if (!athletes.length) {
       emptyState.style.display = 'block';
+      refreshAthleteSelectors();
       return;
     }
 
@@ -110,6 +141,7 @@
           event.stopPropagation();
           AthleteStore.remove(athlete.id);
           renderAthletes();
+          renderJumpLog();
         });
 
         item.addEventListener('click', () => openAthleteDetail(athlete.id));
@@ -118,6 +150,8 @@
         item.appendChild(deleteBtn);
         listEl.appendChild(item);
       });
+
+    refreshAthleteSelectors();
   }
 
   function openAthleteDetail(id) {
@@ -160,6 +194,148 @@
     AthleteStore.update(currentAthleteId, { pr: detailPr.value });
   }
 
+  function setDefaultDate() {
+    const today = new Date().toISOString().split('T')[0];
+    if (logDateInput) {
+      logDateInput.value = today;
+    }
+  }
+
+  function getSelectedResult() {
+    const selected = Array.from(logResultInputs).find((input) => input.checked);
+    return selected ? selected.value : null;
+  }
+
+  function getAthleteNameMap() {
+    return AthleteStore.getAll().reduce((acc, athlete) => {
+      acc[athlete.id] = athlete.name;
+      return acc;
+    }, {});
+  }
+
+  function renderJumpLog() {
+    const filterId = logFilterSelect.value || 'all';
+    const allJumps = filterId === 'all' ? JumpStore.getAll() : JumpStore.getByAthlete(filterId);
+    const athletesById = getAthleteNameMap();
+
+    const sorted = allJumps
+      .slice()
+      .sort((a, b) => {
+        if (a.date === b.date) return b.createdAt - a.createdAt;
+        return a.date < b.date ? 1 : -1;
+      });
+
+    const byDate = sorted.reduce((groups, jump) => {
+      groups[jump.date] = groups[jump.date] || [];
+      groups[jump.date].push(jump);
+      return groups;
+    }, {});
+
+    logList.innerHTML = '';
+
+    const dates = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
+
+    if (!dates.length) {
+      logEmpty.style.display = 'block';
+      return;
+    }
+
+    logEmpty.style.display = 'none';
+
+    dates.forEach((date) => {
+      const section = document.createElement('section');
+      section.className = 'log-day';
+
+      const header = document.createElement('header');
+      const title = document.createElement('h3');
+      title.textContent = new Date(date).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const count = document.createElement('p');
+      count.className = 'subtitle';
+      count.textContent = `${byDate[date].length} jump${byDate[date].length === 1 ? '' : 's'}`;
+      header.appendChild(title);
+      header.appendChild(count);
+      section.appendChild(header);
+
+      const list = document.createElement('ul');
+
+      byDate[date].forEach((jump) => {
+        const item = document.createElement('li');
+        item.className = 'log-entry';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+
+        const heading = document.createElement('p');
+        heading.className = 'title';
+        const athleteName = athletesById[jump.athleteId] || 'Unknown athlete';
+        heading.textContent = `${athleteName} · ${jump.bar}`;
+
+        const note = document.createElement('p');
+        note.className = 'note';
+        note.textContent = jump.note || '—';
+
+        meta.appendChild(heading);
+        meta.appendChild(note);
+
+        const badge = document.createElement('span');
+        const isMake = jump.result === 'make';
+        badge.className = `result-badge ${isMake ? 'result-make' : 'result-miss'}`;
+        badge.textContent = isMake ? 'Make' : 'Miss';
+
+        item.appendChild(meta);
+        item.appendChild(badge);
+        list.appendChild(item);
+      });
+
+      section.appendChild(list);
+      logList.appendChild(section);
+    });
+  }
+
+  function handleLogSubmit(event) {
+    event.preventDefault();
+    const athleteId = logAthleteSelect.value;
+    const date = logDateInput.value;
+    const bar = logBarInput.value;
+    const result = getSelectedResult();
+    const note = logNoteInput.value;
+
+    if (!athleteId) {
+      logError.textContent = 'Choose an athlete to log a jump.';
+      logAthleteSelect.focus();
+      return;
+    }
+
+    if (!date) {
+      logError.textContent = 'Pick a date for the jump.';
+      logDateInput.focus();
+      return;
+    }
+
+    if (!bar.trim()) {
+      logError.textContent = 'Enter the bar height hit or attempted.';
+      logBarInput.focus();
+      return;
+    }
+
+    const saved = JumpStore.add({ athleteId, date, bar, result, note });
+    if (!saved) {
+      logError.textContent = 'Unable to save jump. Please try again.';
+      return;
+    }
+
+    logError.textContent = '';
+    logForm.reset();
+    setDefaultDate();
+    populateAthleteSelect(logAthleteSelect, { selectedId: athleteId });
+    logFilterSelect.value = athleteId;
+    renderJumpLog();
+  }
+
   function setupNav() {
     navItems.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -169,6 +345,14 @@
           setNavActive('athletes-screen');
           return;
         }
+
+        if (target === 'log') {
+          setActiveScreen('log-screen');
+          setNavActive('log');
+          renderJumpLog();
+          return;
+        }
+
         setNavActive(target);
         showPlaceholder(target);
       });
@@ -182,15 +366,29 @@
     });
 
     viewLogBtn.addEventListener('click', () => {
+      if (!currentAthleteId) return;
       setNavActive('log');
-      showPlaceholder('logLink');
+      setActiveScreen('log-screen');
+      refreshAthleteSelectors();
+      populateAthleteSelect(logAthleteSelect, { selectedId: currentAthleteId });
+      logFilterSelect.value = currentAthleteId;
+      renderJumpLog();
     });
 
     detailPr.addEventListener('input', handlePrChange);
   }
 
+  function setupLogActions() {
+    logForm.addEventListener('submit', handleLogSubmit);
+    logFilterSelect.addEventListener('change', renderJumpLog);
+  }
+
   form.addEventListener('submit', handleSubmit);
   setupNav();
   setupDetailActions();
+  setupLogActions();
+  setDefaultDate();
+  refreshAthleteSelectors();
   renderAthletes();
+  renderJumpLog();
 })();
