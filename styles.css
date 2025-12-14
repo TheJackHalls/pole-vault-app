@@ -61,6 +61,12 @@ body {
   font-size: 14px;
 }
 
+.helper-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);

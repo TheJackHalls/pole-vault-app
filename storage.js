@@ -1,6 +1,7 @@
 (function () {
   const STORAGE_KEY = 'taykof_athletes_v1';
   const JUMP_STORAGE_KEY = 'taykof_jumps_v1';
+  const SETTINGS_KEY = 'taykof_settings_v1';
 
   function createId() {
     return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -35,11 +36,15 @@
   }
 
   function normalizeJump(raw) {
+    const storedBarValue = Number(raw.barValueCm);
     return {
       id: raw.id,
       athleteId: raw.athleteId,
       date: raw.date,
-      bar: raw.bar,
+      bar: raw.bar || raw.barRaw || '',
+      barRaw: typeof raw.barRaw === 'string' ? raw.barRaw : raw.bar || '',
+      barValueCm: Number.isFinite(storedBarValue) ? storedBarValue : null,
+      barUnitMode: raw.barUnitMode === 'metric' ? 'metric' : 'imperial',
       result: raw.result === 'miss' ? 'miss' : 'make',
       note: raw.note || '',
       createdAt: raw.createdAt || Date.now(),
@@ -117,8 +122,8 @@
       writeJumps(filtered);
       return filtered;
     },
-    add({ athleteId, date, bar, result, note }) {
-      const trimmedBar = (bar || '').trim();
+    add({ athleteId, date, barRaw, barValueCm, barUnitMode, result, note }) {
+      const trimmedBar = (barRaw || '').trim();
       const trimmedNote = (note || '').trim();
       if (!athleteId || !date || !trimmedBar || !result) return null;
 
@@ -127,6 +132,9 @@
         athleteId,
         date,
         bar: trimmedBar,
+        barRaw: trimmedBar,
+        barValueCm: Number.isFinite(barValueCm) ? barValueCm : null,
+        barUnitMode: barUnitMode === 'metric' ? 'metric' : 'imperial',
         result: result === 'miss' ? 'miss' : 'make',
         note: trimmedNote,
         createdAt: Date.now(),
@@ -136,6 +144,36 @@
       jumps.push(jump);
       writeJumps(jumps);
       return jump;
+    },
+  };
+
+  function readSettings() {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (!saved) return { unitMode: 'imperial' };
+    try {
+      const parsed = JSON.parse(saved);
+      return {
+        unitMode: parsed.unitMode === 'metric' ? 'metric' : 'imperial',
+      };
+    } catch (err) {
+      console.error('Could not read settings', err);
+      return { unitMode: 'imperial' };
+    }
+  }
+
+  function writeSettings(settings) {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  window.SettingsStore = {
+    getUnitMode() {
+      const saved = readSettings();
+      return saved.unitMode === 'metric' ? 'metric' : 'imperial';
+    },
+    setUnitMode(mode) {
+      const unitMode = mode === 'metric' ? 'metric' : 'imperial';
+      writeSettings({ unitMode });
+      return unitMode;
     },
   };
 })();

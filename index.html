@@ -90,6 +90,7 @@
               <input id="log-bar" type="text" inputmode="text" placeholder="e.g., 11' 6&quot;" required>
             </label>
           </div>
+          <p class="helper-text" id="bar-helper">Imperial: feet and inches (e.g., 11' 6" or 11-6)</p>
           <div class="field">
             <span>Result *</span>
             <div class="result-toggle" role="group" aria-label="Result">
@@ -138,6 +139,33 @@
       </header>
       <section class="card">
         <p class="empty-state" id="placeholder-body">We are working on this feature. It will show up here once ready.</p>
+      </section>
+    </section>
+
+    <section id="settings-screen" class="screen">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h1>Preferences</h1>
+          <p class="subtitle">Choose how bar heights are entered and displayed.</p>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="field">
+          <span>Units</span>
+          <div class="result-toggle" role="group" aria-label="Units">
+            <label class="toggle-pill">
+              <input type="radio" name="settings-units" value="imperial" checked>
+              <span>Imperial (ft/in)</span>
+            </label>
+            <label class="toggle-pill">
+              <input type="radio" name="settings-units" value="metric">
+              <span>Metric (m/cm)</span>
+            </label>
+          </div>
+          <p class="helper-text">Applies to logging and viewing bar heights.</p>
+        </div>
       </section>
     </section>
   </main>
