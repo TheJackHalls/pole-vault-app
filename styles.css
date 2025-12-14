@@ -311,7 +311,7 @@ body {
 .log-entry .heading-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -350,22 +350,25 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  color: #334155;
-  background: #e2e8f0;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
 }
 
 .session-competition {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
 }
 
 .session-practice {
-  background: #e0f2fe;
-  color: #075985;
+  background: #eff6ff;
+  border-color: #dbeafe;
+  color: #1d4ed8;
 }
 
 .result-make {

@@ -378,9 +378,11 @@
         heading.textContent = `${athleteName} · ${formatBarForDisplay(jump)}`;
 
         const sessionType = jump.sessionType === 'competition' ? 'competition' : 'practice';
+        const sessionLabel = sessionType === 'competition' ? 'Competition' : 'Practice';
         const sessionTag = document.createElement('span');
         sessionTag.className = `session-tag ${sessionType === 'competition' ? 'session-competition' : 'session-practice'}`;
-        sessionTag.textContent = sessionType === 'competition' ? 'Competition' : 'Practice';
+        sessionTag.textContent = sessionLabel;
+        sessionTag.setAttribute('aria-label', `Session type: ${sessionLabel}`);
 
         headingRow.appendChild(heading);
         headingRow.appendChild(sessionTag);
