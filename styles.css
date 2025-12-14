@@ -106,6 +106,12 @@ body {
   color: var(--text);
 }
 
+.field input:disabled,
+.field select:disabled {
+  background: #f8fafc;
+  color: var(--muted);
+}
+
 .field input:focus,
 .field select:focus {
   outline: 2px solid var(--accent);
