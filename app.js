@@ -25,6 +25,7 @@
   const logDateInput = document.getElementById('log-date');
   const logBarInput = document.getElementById('log-bar');
   const logResultInputs = document.querySelectorAll('input[name="log-result"]');
+  const logResultField = document.getElementById('result-field');
   const logSessionTypeInputs = document.querySelectorAll('input[name="log-session-type"]');
   const logBarUpInputs = document.querySelectorAll('input[name="log-bar-up"]');
   const logBarUpField = document.getElementById('bar-up-field');
@@ -329,17 +330,20 @@
     const sessionType = getSelectedSessionType();
     const isCompetition = sessionType === 'competition';
     const selectedBarUp = getSelectedBarUp();
-    const barUp = isCompetition ? true : selectedBarUp ?? false;
+    const barUp = isCompetition ? true : selectedBarUp === true;
+    const shouldShowResult = isCompetition || barUp;
 
     if (logBarUpField) {
-      logBarUpField.style.display = isCompetition ? 'none' : '';
+      logBarUpField.style.display = '';
     }
 
     logBarUpInputs.forEach((input) => {
       if (isCompetition) {
         input.checked = input.value === 'yes';
+        input.disabled = input.value === 'no';
+      } else {
+        input.disabled = false;
       }
-      input.disabled = isCompetition;
     });
 
     const shouldShowResult = isCompetition || barUp;
@@ -360,8 +364,26 @@
     if (disableBarInput) {
       logBarInput.value = '';
       logBarInput.removeAttribute('required');
-    } else {
-      logBarInput.setAttribute('required', 'required');
+    }
+
+    if (logResultField) {
+      logResultField.style.display = shouldShowResult ? '' : 'none';
+    }
+
+    const hasResultSelected = !!getSelectedResult();
+    logResultInputs.forEach((input) => {
+      input.required = shouldShowResult;
+      if (!shouldShowResult) {
+        input.checked = false;
+      }
+    });
+
+    if (shouldShowResult && !hasResultSelected && logResultInputs.length) {
+      logResultInputs[0].checked = true;
+    }
+
+    if (!shouldShowResult && logError) {
+      logError.textContent = '';
     }
 
     if (barLabel) {
@@ -451,9 +473,10 @@
         meta.appendChild(note);
 
         const badge = document.createElement('span');
+        const hasResult = jump.result === 'make' || jump.result === 'miss';
         const isMake = jump.result === 'make';
-        badge.className = `result-badge ${isMake ? 'result-make' : 'result-miss'}`;
-        badge.textContent = isMake ? 'Make' : 'Miss';
+        badge.className = `result-badge ${hasResult ? (isMake ? 'result-make' : 'result-miss') : 'result-miss'}`;
+        badge.textContent = hasResult ? (isMake ? 'Make' : 'Miss') : 'No result';
 
         const actions = document.createElement('div');
         actions.className = 'log-actions';
@@ -487,10 +510,12 @@
     event.preventDefault();
     const athleteId = logAthleteSelect.value;
     const date = logDateInput.value;
-    const result = getSelectedResult();
     const sessionType = getSelectedSessionType();
     const isCompetition = sessionType === 'competition';
-    const barUp = isCompetition ? true : getSelectedBarUp() ?? false;
+    const barUpSelection = getSelectedBarUp();
+    const barUp = isCompetition ? true : barUpSelection === true;
+    const requireResult = isCompetition || barUp;
+    const result = getSelectedResult();
     const barRaw = barUp ? logBarInput.value : '';
     const note = logNoteInput.value;
     const unitMode = getUnitMode();
@@ -514,13 +539,23 @@
       return;
     }
 
+    if (requireResult && !result) {
+      logError.textContent = 'Select the jump result.';
+      if (logResultInputs[0]) {
+        logResultInputs[0].focus();
+      }
+      return;
+    }
+
+    const resultToSave = requireResult ? result : null;
+
     const saved = JumpStore.add({
       athleteId,
       date,
       barRaw,
       barValueCm,
       barUnitMode: unitMode,
-      result,
+      result: resultToSave,
       sessionType,
       barUp,
       note,
