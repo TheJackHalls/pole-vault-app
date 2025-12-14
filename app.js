@@ -29,6 +29,7 @@
   const logSessionTypeInputs = document.querySelectorAll('input[name="log-session-type"]');
   const logBarUpInputs = document.querySelectorAll('input[name="log-bar-up"]');
   const logBarUpField = document.getElementById('bar-up-field');
+  const logResultField = document.getElementById('result-field');
   const logNoteInput = document.getElementById('log-note');
   const logError = document.getElementById('log-error');
   const logList = document.getElementById('jump-log');
@@ -36,6 +37,7 @@
   const logFilterSelect = document.getElementById('log-filter');
   const unitModeInputs = document.querySelectorAll('input[name="settings-units"]');
   const barHelper = document.getElementById('bar-helper');
+  const barLabel = document.getElementById('bar-label');
 
   let currentAthleteId = null;
 
@@ -344,11 +346,22 @@
       }
     });
 
-    const barIsRequired = isCompetition || barUp;
-    logBarInput.disabled = !barIsRequired;
-    if (barIsRequired) {
-      logBarInput.setAttribute('required', 'required');
-    } else {
+    const shouldShowResult = isCompetition || barUp;
+    if (logResultField) {
+      logResultField.style.display = shouldShowResult ? '' : 'none';
+    }
+    logResultInputs.forEach((input) => {
+      input.disabled = !shouldShowResult;
+    });
+
+    if (shouldShowResult && !getSelectedResult()) {
+      const defaultResult = Array.from(logResultInputs).find((input) => input.value === 'make') || logResultInputs[0];
+      if (defaultResult) defaultResult.checked = true;
+    }
+
+    const disableBarInput = !barUp && !isCompetition;
+    logBarInput.disabled = disableBarInput;
+    if (disableBarInput) {
       logBarInput.value = '';
       logBarInput.removeAttribute('required');
     }
@@ -371,6 +384,10 @@
 
     if (!shouldShowResult && logError) {
       logError.textContent = '';
+    }
+
+    if (barLabel) {
+      barLabel.textContent = disableBarInput ? 'Bar height (optional)' : 'Bar height *';
     }
   }
 
