@@ -28,6 +28,7 @@
   const logSessionTypeInputs = document.querySelectorAll('input[name="log-session-type"]');
   const logBarUpInputs = document.querySelectorAll('input[name="log-bar-up"]');
   const logBarUpField = document.getElementById('bar-up-field');
+  const logResultField = document.getElementById('result-field');
   const logNoteInput = document.getElementById('log-note');
   const logError = document.getElementById('log-error');
   const logList = document.getElementById('jump-log');
@@ -35,6 +36,7 @@
   const logFilterSelect = document.getElementById('log-filter');
   const unitModeInputs = document.querySelectorAll('input[name="settings-units"]');
   const barHelper = document.getElementById('bar-helper');
+  const barLabel = document.getElementById('bar-label');
 
   let currentAthleteId = null;
 
@@ -323,7 +325,7 @@
     return jump.barRaw || jump.bar || '—';
   }
 
-  function updateBarControls() {
+  function updateLogFormVisibility() {
     const sessionType = getSelectedSessionType();
     const isCompetition = sessionType === 'competition';
     const selectedBarUp = getSelectedBarUp();
@@ -340,6 +342,19 @@
       input.disabled = isCompetition;
     });
 
+    const shouldShowResult = isCompetition || barUp;
+    if (logResultField) {
+      logResultField.style.display = shouldShowResult ? '' : 'none';
+    }
+    logResultInputs.forEach((input) => {
+      input.disabled = !shouldShowResult;
+    });
+
+    if (shouldShowResult && !getSelectedResult()) {
+      const defaultResult = Array.from(logResultInputs).find((input) => input.value === 'make') || logResultInputs[0];
+      if (defaultResult) defaultResult.checked = true;
+    }
+
     const disableBarInput = !barUp && !isCompetition;
     logBarInput.disabled = disableBarInput;
     if (disableBarInput) {
@@ -347,6 +362,10 @@
       logBarInput.removeAttribute('required');
     } else {
       logBarInput.setAttribute('required', 'required');
+    }
+
+    if (barLabel) {
+      barLabel.textContent = disableBarInput ? 'Bar height (optional)' : 'Bar height *';
     }
   }
 
@@ -516,7 +535,7 @@
     setDefaultDate();
     populateAthleteSelect(logAthleteSelect, { selectedId: athleteId });
     logFilterSelect.value = athleteId;
-    updateBarControls();
+    updateLogFormVisibility();
     renderJumpLog();
   }
 
@@ -583,10 +602,10 @@
     logForm.addEventListener('submit', handleLogSubmit);
     logFilterSelect.addEventListener('change', renderJumpLog);
     logSessionTypeInputs.forEach((input) => {
-      input.addEventListener('change', updateBarControls);
+      input.addEventListener('change', updateLogFormVisibility);
     });
     logBarUpInputs.forEach((input) => {
-      input.addEventListener('change', updateBarControls);
+      input.addEventListener('change', updateLogFormVisibility);
     });
   }
 
@@ -597,7 +616,7 @@
   setupLogActions();
   setDefaultDate();
   refreshAthleteSelectors();
-  updateBarControls();
+  updateLogFormVisibility();
   renderAthletes();
   renderJumpLog();
 })();
