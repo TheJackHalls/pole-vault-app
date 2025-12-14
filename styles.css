@@ -289,6 +289,12 @@ body {
   background: #f8fafc;
 }
 
+.log-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .log-entry .meta {
   display: flex;
   flex-direction: column;
@@ -315,6 +321,16 @@ body {
   border-radius: 999px;
   font-weight: 700;
   text-transform: capitalize;
+}
+
+.log-delete-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--danger);
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
 .result-make {

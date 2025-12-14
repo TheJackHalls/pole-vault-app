@@ -286,8 +286,26 @@
         badge.className = `result-badge ${isMake ? 'result-make' : 'result-miss'}`;
         badge.textContent = isMake ? 'Make' : 'Miss';
 
+        const actions = document.createElement('div');
+        actions.className = 'log-actions';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'log-delete-btn';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.setAttribute('aria-label', `Delete jump for ${athleteName}`);
+        deleteBtn.addEventListener('click', () => {
+          const confirmed = window.confirm(`Delete this jump for ${athleteName}?`);
+          if (!confirmed) return;
+          JumpStore.remove(jump.id);
+          renderJumpLog();
+        });
+
+        actions.appendChild(deleteBtn);
+        actions.appendChild(badge);
+
         item.appendChild(meta);
-        item.appendChild(badge);
+        item.appendChild(actions);
         list.appendChild(item);
       });
 
