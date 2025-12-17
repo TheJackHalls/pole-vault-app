@@ -38,8 +38,25 @@
   const unitModeInputs = document.querySelectorAll('input[name="settings-units"]');
   const barHelper = document.getElementById('bar-helper');
   const barLabel = document.getElementById('bar-label');
+  const bannerEl = document.getElementById('app-banner');
 
   let currentAthleteId = null;
+
+  function setFormError(message) {
+    if (errorEl) {
+      errorEl.textContent = message || '';
+    } else if (message) {
+      console.warn('Form error:', message);
+    }
+  }
+
+  function setLogError(message) {
+    if (logError) {
+      logError.textContent = message || '';
+    } else if (message) {
+      console.warn('Log error:', message);
+    }
+  }
 
   const placeholderContent = {
     poles: {
@@ -47,7 +64,61 @@
       subtitle: 'Pole bag planning is coming soon.',
       body: 'Organize poles, labels, and recommendations in one spot.',
     },
+    settings: {
+      title: 'Coming soon',
+      subtitle: 'This area is being built. Check back soon.',
+      body: 'We are working on this feature. It will show up here once ready.',
+    },
+    default: {
+      title: 'Coming soon',
+      subtitle: 'This area is being built. Check back soon.',
+      body: 'We are working on this feature. It will show up here once ready.',
+    },
   };
+
+  function showBanner(message) {
+    if (!bannerEl) return;
+    bannerEl.textContent = message;
+    bannerEl.classList.add('is-visible');
+  }
+
+  function hideBanner() {
+    if (!bannerEl) return;
+    bannerEl.classList.remove('is-visible');
+    bannerEl.textContent = '';
+  }
+
+  function handleGlobalError(message, error) {
+    console.error(message, error);
+    showBanner(message);
+  }
+
+  window.addEventListener('error', (event) => {
+    handleGlobalError('Something went wrong. Some actions may not work.', event.error || event.message);
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    handleGlobalError('A background action failed. Some actions may not work.', event.reason);
+  });
+
+  window.addEventListener('app-storage-error', (event) => {
+    const message = event.detail?.message || 'Saving data is unavailable right now.';
+    showBanner(message);
+  });
+
+  function safeAddEventListener(element, event, handler) {
+    if (!element) {
+      console.warn(`Skipped binding for missing element: ${event}`);
+      return;
+    }
+    element.addEventListener(event, (evt) => {
+      try {
+        handler(evt);
+      } catch (err) {
+        handleGlobalError('An action failed. Please try again.', err);
+      }
+    });
+  }
 
   function getUnitMode() {
     return SettingsStore.getUnitMode();
@@ -88,15 +159,16 @@
   }
 
   function showPlaceholder(type) {
-    const content = placeholderContent[type] || placeholderContent.settings;
-    placeholderEyebrow.textContent = 'Coming soon';
-    placeholderTitle.textContent = content.title;
-    placeholderSubtitle.textContent = content.subtitle;
-    placeholderBody.textContent = content.body;
+    const content = placeholderContent[type] || placeholderContent.default;
+    if (placeholderEyebrow) placeholderEyebrow.textContent = 'Coming soon';
+    if (placeholderTitle) placeholderTitle.textContent = content.title;
+    if (placeholderSubtitle) placeholderSubtitle.textContent = content.subtitle;
+    if (placeholderBody) placeholderBody.textContent = content.body;
     setActiveScreen('placeholder-screen');
   }
 
   function populateAthleteSelect(selectEl, { includeAll = false, selectedId = null } = {}) {
+    if (!selectEl) return;
     const athletes = AthleteStore.getAll().slice().sort((a, b) => a.name.localeCompare(b.name));
     const currentValue = selectedId ?? selectEl.value;
     selectEl.innerHTML = '';
@@ -122,10 +194,11 @@
 
   function refreshAthleteSelectors() {
     populateAthleteSelect(logAthleteSelect);
-    populateAthleteSelect(logFilterSelect, { includeAll: true, selectedId: logFilterSelect.value || 'all' });
+    populateAthleteSelect(logFilterSelect, { includeAll: true, selectedId: logFilterSelect?.value || 'all' });
   }
 
   function renderAthletes() {
+    if (!listEl || !emptyState) return;
     const athletes = AthleteStore.getAll();
     listEl.innerHTML = '';
 
@@ -184,6 +257,7 @@
   function openAthleteDetail(id) {
     const athlete = AthleteStore.getById(id);
     if (!athlete) return;
+    if (!detailName || !detailSex || !detailPr) return;
 
     currentAthleteId = id;
     detailName.textContent = athlete.name;
@@ -199,18 +273,18 @@
     const sex = sexInput.value;
 
     if (!name.trim()) {
-      errorEl.textContent = 'Name is required.';
+      setFormError('Name is required.');
       nameInput.focus();
       return;
     }
 
     const added = AthleteStore.add({ name, sex });
     if (!added) {
-      errorEl.textContent = 'Unable to save athlete. Please try again.';
+      setFormError('Unable to save athlete. Please try again.');
       return;
     }
 
-    errorEl.textContent = '';
+    setFormError('');
     form.reset();
     nameInput.focus();
     renderAthletes();
@@ -241,6 +315,21 @@
   function getSelectedBarUp() {
     const selected = Array.from(logBarUpInputs).find((input) => input.checked);
     return selected ? selected.value === 'yes' : null;
+  }
+
+  function deriveLogState() {
+    const sessionType = getSelectedSessionType();
+    const isCompetition = sessionType === 'competition';
+    const selectedBarUp = getSelectedBarUp();
+    const barUp = isCompetition ? true : selectedBarUp === true;
+    const shouldShowResult = isCompetition || barUp;
+
+    return {
+      sessionType,
+      isCompetition,
+      barUp,
+      shouldShowResult,
+    };
   }
 
   function getAthleteNameMap() {
@@ -327,12 +416,11 @@
   }
 
   function updateLogFormVisibility() {
-    const sessionType = getSelectedSessionType();
-    const isCompetition = sessionType === 'competition';
-    const selectedBarUp = getSelectedBarUp();
-    const barUp = isCompetition ? true : selectedBarUp === true;
-    const showBarUpField = !isCompetition;
-    const shouldShowResult = isCompetition || barUp;
+    const state = deriveLogState();
+    const showBarUpField = !state.isCompetition;
+    const shouldShowResult = state.shouldShowResult;
+
+    if (!logBarInput) return;
 
     if (logBarUpField) {
       logBarUpField.style.display = showBarUpField ? '' : 'none';
@@ -362,7 +450,7 @@
       logResultInputs[0].checked = true;
     }
 
-    const disableBarInput = !barUp;
+    const disableBarInput = !state.barUp;
     logBarInput.disabled = disableBarInput;
     logBarInput.required = !disableBarInput;
     if (disableBarInput) {
@@ -383,6 +471,7 @@
   }
 
   function renderJumpLog() {
+    if (!logFilterSelect || !logList || !logEmpty) return;
     const filterId = logFilterSelect.value || 'all';
     const allJumps = filterId === 'all' ? JumpStore.getAll() : JumpStore.getByAthlete(filterId);
     const athletesById = getAthleteNameMap();
@@ -499,46 +588,43 @@
 
   function handleLogSubmit(event) {
     event.preventDefault();
+    if (!logAthleteSelect || !logDateInput || !logBarInput || !logForm) return;
     const athleteId = logAthleteSelect.value;
     const date = logDateInput.value;
-    const sessionType = getSelectedSessionType();
-    const isCompetition = sessionType === 'competition';
-    const barUpSelection = getSelectedBarUp();
-    const barUp = isCompetition ? true : barUpSelection === true;
-    const requireResult = isCompetition || barUp;
+    const state = deriveLogState();
     const result = getSelectedResult();
-    const barRaw = barUp ? logBarInput.value : '';
+    const barRaw = state.barUp ? logBarInput.value : '';
     const note = logNoteInput.value;
     const unitMode = getUnitMode();
-    const barValueCm = barUp ? parseBarHeight(barRaw, unitMode) : null;
+    const barValueCm = state.barUp ? parseBarHeight(barRaw, unitMode) : null;
 
     if (!athleteId) {
-      logError.textContent = 'Choose an athlete to log a jump.';
-      logAthleteSelect.focus();
+      setLogError('Choose an athlete to log a jump.');
+      logAthleteSelect?.focus();
       return;
     }
 
     if (!date) {
-      logError.textContent = 'Pick a date for the jump.';
-      logDateInput.focus();
+      setLogError('Pick a date for the jump.');
+      logDateInput?.focus();
       return;
     }
 
-    if (barUp && !barRaw.trim()) {
-      logError.textContent = 'Enter the bar height hit or attempted.';
-      logBarInput.focus();
+    if (state.barUp && !barRaw.trim()) {
+      setLogError('Enter the bar height hit or attempted.');
+      logBarInput?.focus();
       return;
     }
 
-    if (requireResult && !result) {
-      logError.textContent = 'Select the jump result.';
+    if (state.shouldShowResult && !result) {
+      setLogError('Select the jump result.');
       if (logResultInputs[0]) {
         logResultInputs[0].focus();
       }
       return;
     }
 
-    const resultToSave = requireResult ? result : null;
+    const resultToSave = state.shouldShowResult ? result : null;
 
     const saved = JumpStore.add({
       athleteId,
@@ -547,16 +633,16 @@
       barValueCm,
       barUnitMode: unitMode,
       result: resultToSave,
-      sessionType,
-      barUp,
+      sessionType: state.sessionType,
+      barUp: state.barUp,
       note,
     });
     if (!saved) {
-      logError.textContent = 'Unable to save jump. Please try again.';
+      setLogError('Unable to save jump. Please try again.');
       return;
     }
 
-    logError.textContent = '';
+    setLogError('');
     logForm.reset();
     setDefaultDate();
     populateAthleteSelect(logAthleteSelect, { selectedId: athleteId });
@@ -567,7 +653,7 @@
 
   function setupNav() {
     navItems.forEach((btn) => {
-      btn.addEventListener('click', () => {
+      safeAddEventListener(btn, 'click', () => {
         const target = btn.dataset.target;
         if (target === 'athletes-screen') {
           setActiveScreen('athletes-screen');
@@ -599,44 +685,46 @@
     setUnitSelection(savedMode);
 
     unitModeInputs.forEach((input) => {
-      input.addEventListener('change', (event) => {
+      safeAddEventListener(input, 'change', (event) => {
         setUnitSelection(event.target.value);
       });
     });
   }
 
   function setupDetailActions() {
-    backBtn.addEventListener('click', () => {
+    safeAddEventListener(backBtn, 'click', () => {
       setActiveScreen('athletes-screen');
       setNavActive('athletes-screen');
     });
 
-    viewLogBtn.addEventListener('click', () => {
+    safeAddEventListener(viewLogBtn, 'click', () => {
       if (!currentAthleteId) return;
       setNavActive('log');
       setActiveScreen('log-screen');
       refreshAthleteSelectors();
       populateAthleteSelect(logAthleteSelect, { selectedId: currentAthleteId });
-      logFilterSelect.value = currentAthleteId;
+      if (logFilterSelect) {
+        logFilterSelect.value = currentAthleteId;
+      }
       renderJumpLog();
     });
 
-    detailPr.addEventListener('input', handlePrChange);
+    safeAddEventListener(detailPr, 'input', handlePrChange);
   }
 
   function setupLogActions() {
-    logForm.addEventListener('submit', handleLogSubmit);
-    logFilterSelect.addEventListener('change', renderJumpLog);
+    safeAddEventListener(logForm, 'submit', handleLogSubmit);
+    safeAddEventListener(logFilterSelect, 'change', renderJumpLog);
     logSessionTypeInputs.forEach((input) => {
-      input.addEventListener('change', updateLogFormVisibility);
+      safeAddEventListener(input, 'change', updateLogFormVisibility);
     });
     logBarUpInputs.forEach((input) => {
-      input.addEventListener('change', updateLogFormVisibility);
+      safeAddEventListener(input, 'change', updateLogFormVisibility);
     });
   }
 
   setupSettings();
-  form.addEventListener('submit', handleSubmit);
+  safeAddEventListener(form, 'submit', handleSubmit);
   setupNav();
   setupDetailActions();
   setupLogActions();
