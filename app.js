@@ -25,11 +25,11 @@
   const logDateInput = document.getElementById('log-date');
   const logBarInput = document.getElementById('log-bar');
   const logResultInputs = document.querySelectorAll('input[name="log-result"]');
-  const logResultField = document.getElementById('result-field');
   const logSessionTypeInputs = document.querySelectorAll('input[name="log-session-type"]');
   const logBarUpInputs = document.querySelectorAll('input[name="log-bar-up"]');
   const logBarUpField = document.getElementById('bar-up-field');
   const logResultField = document.getElementById('result-field');
+  const resultLabel = document.getElementById('result-label');
   const logNoteInput = document.getElementById('log-note');
   const logError = document.getElementById('log-error');
   const logList = document.getElementById('jump-log');
@@ -331,40 +331,19 @@
     const isCompetition = sessionType === 'competition';
     const selectedBarUp = getSelectedBarUp();
     const barUp = isCompetition ? true : selectedBarUp === true;
+    const showBarUpField = !isCompetition;
     const shouldShowResult = isCompetition || barUp;
 
     if (logBarUpField) {
-      logBarUpField.style.display = '';
+      logBarUpField.style.display = showBarUpField ? '' : 'none';
     }
 
     logBarUpInputs.forEach((input) => {
-      if (isCompetition) {
+      input.disabled = !showBarUpField;
+      if (!showBarUpField) {
         input.checked = input.value === 'yes';
-        input.disabled = input.value === 'no';
-      } else {
-        input.disabled = false;
       }
     });
-
-    const shouldShowResult = isCompetition || barUp;
-    if (logResultField) {
-      logResultField.style.display = shouldShowResult ? '' : 'none';
-    }
-    logResultInputs.forEach((input) => {
-      input.disabled = !shouldShowResult;
-    });
-
-    if (shouldShowResult && !getSelectedResult()) {
-      const defaultResult = Array.from(logResultInputs).find((input) => input.value === 'make') || logResultInputs[0];
-      if (defaultResult) defaultResult.checked = true;
-    }
-
-    const disableBarInput = !barUp && !isCompetition;
-    logBarInput.disabled = disableBarInput;
-    if (disableBarInput) {
-      logBarInput.value = '';
-      logBarInput.removeAttribute('required');
-    }
 
     if (logResultField) {
       logResultField.style.display = shouldShowResult ? '' : 'none';
@@ -372,6 +351,7 @@
 
     const hasResultSelected = !!getSelectedResult();
     logResultInputs.forEach((input) => {
+      input.disabled = !shouldShowResult;
       input.required = shouldShowResult;
       if (!shouldShowResult) {
         input.checked = false;
@@ -380,6 +360,17 @@
 
     if (shouldShowResult && !hasResultSelected && logResultInputs.length) {
       logResultInputs[0].checked = true;
+    }
+
+    const disableBarInput = !barUp;
+    logBarInput.disabled = disableBarInput;
+    logBarInput.required = !disableBarInput;
+    if (disableBarInput) {
+      logBarInput.value = '';
+    }
+
+    if (resultLabel) {
+      resultLabel.textContent = shouldShowResult ? 'Result *' : 'Result';
     }
 
     if (!shouldShowResult && logError) {
