@@ -1,246 +1,262 @@
-# Taykof PWA — Master Plan
+## Global UI Standards
 
-## Purpose of This Document
+These rules apply across all tabs/screens:
 
-This document is the **single source of truth** for how Taykof is built and evolved.
-
-It exists to:
-
-* Keep the project aligned with real coaching needs
-* Prevent feature creep
-* Give clear guidance to AI tools (Codex)
-* Help future changes stay consistent and stable
-
-If there is ever a conflict between ideas in chat, commits, or experiments, **this document wins**.
-
----
-
-## What Taykof Is
-
-Taykof is a **mobile-first, offline-capable PWA** designed to help a **high school pole vault coach** quickly log and review jumps during practice or competition.
-
-It is:
-
-* Coach-first
-* Speed-focused
-* Designed for one-handed use outdoors
-* Meant to replace (or beat) a paper clipboard
+- The top-of-screen title MUST be consistent across Athletes / Log / Poles / Settings:
+  - One title only (no redundant subtitles like “Jump Log” or “Preferences”).
+  - Same font, size, spacing, and placement on every screen.
+- Instructional helper text under titles SHOULD be removed where the UI is self-explanatory.
+- Branding:
+  - The app name “TAYKOF” should not be tiny text.
+  - Replace with a more professional header treatment (logo/wordmark).
+- Bottom navigation:
+  - Make the bottom nav slightly larger and positioned slightly higher for easier tapping on phones.
 
 ---
 
-## What Taykof Is Not (Current Scope)
+## Athletes
 
-Taykof is **not** currently:
+### Athletes List Screen
 
-* A recruiting platform
-* A social app
-* A deep analytics tool
-* A cloud-synced system
-* A multi-user athlete self-logging app
+What works now:
+- Adding athletes is fast and straightforward.
+- Deleting athletes is fast and straightforward.
 
-Those ideas may exist later, but they are **explicitly out of scope right now**.
+Required behavior:
+- Remove the instructional text under the Athletes title.
+- Layout order MUST be:
+  1) Saved athletes list (top)
+  2) Add athlete form (below)
+- Athlete add fields:
+  - Name is required.
+  - Sex selection remains for quick reference.
 
----
+Nice-to-have / later:
+- Archive athletes (keep their data but remove from active list). This may be deferred until a future login/cloud phase.
 
-## Core Design Principles (Non-Negotiable)
+### Athlete Detail Screen
 
-These rules apply to **every change**:
+What works now:
+- The athlete detail view is simple.
 
-1. **Speed over completeness**
-   If a feature slows practice down, it fails.
+Required behavior:
+- Add an edit affordance (small pencil icon) to edit athlete details.
+- PR handling:
+  - Manual PR entry should remain available.
+  - PR input should be feet/inches as two fields when using imperial:
+    - Feet field
+    - Inches field (supports decimals as needed)
+  - On mobile, numeric fields should open a numeric keypad (not full keyboard) for speed.
+- Reduce PR/save confusion:
+  - Do NOT place “View jump log” directly under a PR input in a way that reads as a “Save” button.
+  - PR should be displayed as a section with the current PR visible.
+  - Editing PR should be a deliberate action (e.g., pencil icon opens edit inputs).
 
-2. **Mobile-first always**
-   iPhone Safari + PWA behavior matters more than desktop.
+PR automation (cross-screen rule):
+- If a coach logs a Competition “Make” at a height higher than the recorded PR:
+  - Show a prompt: “This appears to be a new PR. Save it?”
+  - Only update PR if the coach confirms.
+- Same-height clears do NOT count as a PR.
+- Unit conversion MUST be handled correctly because competitions may use imperial or metric.
 
-3. **Minimal taps**
-   Fewer taps beats more data.
-
-4. **Readable outdoors**
-   Light mode, high contrast, large tap targets.
-
-5. **Offline-first**
-   The app must work with no internet.
-
-6. **Stable > clever**
-   Predictable and boring is better than fragile and fancy.
-
----
-
-## Current State
-
-**Current stable version:** v0.2.1
-**Status:** Stable, reliable, ready for iteration
-
-v0.2.1 focused on:
-
-* iPhone tap reliability
-* Preventing silent crashes
-* Hardening storage and initialization
-* Fixing jump log logic contradictions
-
----
-
-## Page-by-Page Intent
-
-### Athletes Page
-
-**Primary job:**
-Quickly select, add, and manage athletes without slowing practice.
-
-**Must be fast:**
-
-* Selecting an athlete
-* Adding a new athlete
-* Deleting an athlete (with safety)
-
-**Secondary concerns:**
-
-* Editing names/descriptors
-* Viewing jump history
-
-**Future improvement ideas (not commitments):**
-
-* Better empty states
-* Clearer confirmation before deletes
-* Faster return to logging
+Athlete detail enhancements:
+- Show a small list of recent jumps for that athlete on the athlete detail page (target: ~3–4, final number TBD).
+- Provide a button below that list labeled “See All Jumps” that navigates to the athlete’s full jump history.
 
 ---
 
-### Log Page (Core Screen)
+## Log
 
-**Primary job:**
-Log a jump in under ~5 seconds.
+What works now:
+- Page is clean and simple; fits “quick logging on the track.”
 
-**Must be fast:**
+Required header behavior:
+- Remove redundant header text (“Log” + “Jump log”).
+- Remove instructional text under the title.
 
-* Athlete selection
-* Bar height
-* Make / miss
-* Save
+### Athlete selection
+- Athlete dropdown MUST be fast and easy:
+  - Athlete list should be alphabetized.
+- Nice-to-have:
+  - A Male/Female quick filter/toggle above athlete dropdown to speed selection for large rosters.
 
-**Optional / secondary:**
+### Timestamp behavior
+- Remove the Date input from the Log form.
+- Each saved jump MUST automatically receive a date + time timestamp at the moment “Add jump” is pressed.
 
-* Notes
-* Pole text
-* Extra context fields (future)
+### Form order and defaults
+- After Athlete selection, show Practice/Competition selection next (it drives the rest of the form).
+- For a selected athlete, the Log form SHOULD default to the values used in that athlete’s previous logged jump (where applicable).
 
-**Rules:**
+### Competition mode (attempt tracking)
+- If Competition is selected:
+  - Show Attempt buttons: 1 / 2 / 3.
+  - Attempt should auto-cycle forward after logging.
+  - If the last attempt was a MAKE and the coach moves to a new height, attempt resets to 1.
+  - Coach MUST be able to override the attempt selection manually (for cases where a jump was not logged in real time).
 
-* Practice vs competition behavior must be predictable
-* The app should remember recent context where possible
-* Logging should never require unnecessary typing
+### Bar height input
+- Bar height should be placed directly below Practice/Competition selection.
+- Bar height should auto-populate with the previous bar height for that athlete (regardless of make or miss).
+- Imperial input preference:
+  - Feet + Inches in separate inputs.
+  - Inches supports two decimal places for speed and precision.
 
-This page has the **highest priority** in all decisions.
+### Practice mode (bar up rules)
+- If Practice is selected:
+  - Show Bar up? Yes/No.
+  - If Bar up = No:
+    - Hide bar height input.
+    - Hide make/miss result controls.
+  - If Bar up = Yes:
+    - Show bar height input.
+    - Show make/miss result controls.
+  - Height should still default to last used height when relevant.
 
----
+### Optional per-jump fields (toggled from Settings)
+All of the following should be storable per jump, but only appear in the Log form if enabled in Settings:
 
-### Poles Page
+1) Steps
+- Settings selects counting mode:
+  - “Lefts/Rights” → dropdown 1–10
+  - “Steps” → dropdown 1–20
 
-**Primary job:**
-Lightweight reference only.
+2) Approach distance (imperial/metric)
+- If imperial: Feet input + Inches dropdown 1–12 (whole inches, no decimals)
 
-**Current intent:**
+3) Coach’s mark distance (same input patterns as approach)
 
-* Simple list of poles with identifiers
-* No tracking, no recommendations
+4) Takeoff step distance (same input patterns as approach)
 
-If this page adds complexity without clear benefit, it should remain minimal or placeholder-level.
+5) Pole selection
+- Dropdown populated from the Poles screen inventory
+- First option: “Add new pole”
 
----
+6) Grip height (imperial/metric)
+- If imperial: Feet input + Inches dropdown (whole inches)
 
-### Settings Page
+7) Standards
+- Metric: dropdown 40–80 cm in 5 cm increments
+- Imperial: dropdown 18–31.5 inches in 1-inch increments (with 31.5 as a special final option)
 
-**Primary job:**
-Control behavior without cluttering practice screens.
+8) Landing
+- Buttons: Shallow / Centered / Deep
 
-**Appropriate settings:**
+9) Pole bend
+- Buttons: Too much / Just right / Too little (wording may be refined later)
 
-* Units (imperial / metric)
-* Defaults that affect logging speed
-* Data management (clear/reset)
+10) Notes
+- Notes remain optional and should stay supported.
 
-Settings should be:
+### Recent jumps and full review separation
+- On the Log screen, show only the most recent ~3 jumps for the currently selected athlete.
+- Provide a button near the top of the Log screen (“See Jump Log” or similar) that takes the user to a separate review screen where:
+  - Athlete is selected for review
+  - Jumps are grouped by date
+  - Within a date, jumps are separated into Practice vs Competition (warmups before competition attempts)
 
-* Rarely used
-* Easy to understand
-* Safe (no accidental data loss)
+Scaling consideration (later):
+- Athletes may accumulate hundreds/thousands of jumps over time.
+- Long-term options may include archiving or pruning very old practice jumps (not an immediate requirement).
 
----
-
-## How Releases Are Planned
-
-Work is organized into **small, outcome-based releases**.
-
-Each release should have:
-
-* One clear goal
-* 1–3 small changes max
-* A simple test checklist
-* No unrelated extras
-
-Example goals:
-
-* “Logging is faster”
-* “Review is easier to scan”
-* “Mistakes are harder to make”
-
----
-
-## Near-Term Roadmap (Living Section)
-
-### v0.3.0 — Coach Workflow Improvement (Draft)
-
-**Candidate goals (choose one):**
-
-* Reduce taps when logging consecutive jumps
-* Make recent jumps easier to scan
-* Add safety/undo for common mistakes
-
-Final scope to be defined before implementation.
-
----
-
-## Backlog (Ideas, Not Promises)
-
-These are intentionally **parked**:
-
-* Approach distance
-* Coach’s mark
-* Steps
-* Grip height
-* Landing zone
-* CSV export
-* Video attachments
-* Accounts / syncing
-
-Presence here does **not** mean “coming soon.”
+Video (future):
+- Eventually: record video directly in-app and attach to jumps with cloud storage (future phase).
+- Possible interim: allow attaching a link (e.g., Google Photos link) to a jump (future consideration).
 
 ---
 
-## Rules for AI Contributions (Codex)
+## Poles
 
-When using AI tools:
+Current state:
+- Placeholder / coming soon.
 
-* Always reference this document
-* Fix stability issues before adding features
-* Do not expand scope without updating this plan
-* Prefer minimal, readable changes
-* Avoid refactors unless explicitly requested
+Required header behavior:
+- Poles title should match the same top title styling as other tabs.
 
-AI should behave like a careful assistant, not a product designer.
+Required functionality:
+- Allow creating and managing a list of poles organized into:
+  - Team Bag
+  - Borrowed Poles
+
+Pole fields when adding/editing:
+- Required:
+  - Length
+  - Weight rating
+- Optional (toggleable via Settings):
+  - Brand
+  - Flex
+  - Nickname
+
+Sorting:
+- Default sort: Length, then Weight.
+- Optional sort modes: Brand or Flex (if those fields are enabled).
+
+Log integration:
+- When pole selection is enabled on the Log screen, the pole dropdown MUST reflect poles stored here.
+
+Nice-to-have / later:
+- “Wish List” button at bottom of Poles screen for poles not yet owned.
+- Future idea: “suggested pole” helper (details TBD).
 
 ---
 
-## Definition of Success
+## Settings
 
-Taykof is successful if:
+Required header behavior:
+- Remove redundant “Preferences” header and instructions.
+- Show only “Settings” with standardized title styling.
 
-* A coach chooses it over paper
-* It never distracts from practice
-* Notes are useful the next day
-* The app feels boring, reliable, and trustworthy
+Settings MUST organize controls into logical groups and support toggles implied by Athletes/Log/Poles.
+
+### Appearance
+- Support Light/Dark mode selection (even if default remains light-first for outdoor use).
+
+### Units
+- Imperial vs Metric preference (used across Log inputs and conversions).
+
+### Logging options (feature toggles)
+- Toggles for optional Log fields:
+  - Steps (and steps counting mode selection)
+  - Approach distance
+  - Coach’s mark
+  - Takeoff step
+  - Pole selection
+  - Grip height
+  - Standards
+  - Landing
+  - Pole bend
+  - Notes (if ever made toggleable; currently assumed always available)
+
+### Poles options (field toggles)
+- Toggle display/storage of:
+  - Brand
+  - Flex
+  - Nickname
+
+### Data management
+- Export/backup feature is required:
+  - Export to spreadsheet-friendly format(s).
+- (Existing clear/reset data features should remain safe and explicit.)
+
+Wishlist / long-term:
+- Integration with meet tracking apps (e.g., SportTrax) to import meet results and auto-add bar heights/makes/misses/place to competition data (future/backburner).
+- App store packaging (iOS/Android), free vs paid tiers, pricing model (future planning).
+- Website + login + cloud storage + coach/athlete permissions (far-future platform goal).
 
 ---
 
-**This document will evolve.
-Stability and clarity matter more than speed.**
+## Product Rules and Data Rules
+
+- Name collisions:
+  - Mitigate duplicate names by expecting First + Last.
+  - Graduation year may be used as an additional optional disambiguator.
+- Corrections:
+  - No undo required; use edit controls for corrections.
+- PR rules:
+  - PR updates only from Competition makes.
+  - Always ask to confirm saving the PR.
+  - Same height does not count as a PR.
+  - Unit conversion matters and must be handled correctly.
+- Review grouping:
+  - Organize by date.
+  - Within date: separate Practice vs Competition (warmups vs meet attempts).
