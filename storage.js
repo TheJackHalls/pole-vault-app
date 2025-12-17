@@ -3,6 +3,34 @@
   const JUMP_STORAGE_KEY = 'taykof_jumps_v1';
   const SETTINGS_KEY = 'taykof_settings_v1';
 
+  function notifyStorageError(err) {
+    console.error('Storage is unavailable', err);
+    window.dispatchEvent(
+      new CustomEvent('app-storage-error', {
+        detail: { message: 'Saving data is unavailable right now. Data may not persist.' },
+      }),
+    );
+  }
+
+  function safeGetItem(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (err) {
+      notifyStorageError(err);
+      return null;
+    }
+  }
+
+  function safeSetItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (err) {
+      notifyStorageError(err);
+      return false;
+    }
+  }
+
   function createId() {
     return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   }
@@ -19,7 +47,7 @@
   }
 
   function read() {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = safeGetItem(STORAGE_KEY);
     if (!saved) return [];
     try {
       const parsed = JSON.parse(saved);
@@ -32,7 +60,7 @@
   }
 
   function write(list) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    return safeSetItem(STORAGE_KEY, JSON.stringify(list));
   }
 
   function normalizeJump(raw) {
@@ -56,7 +84,7 @@
       barRaw: typeof raw.barRaw === 'string' ? raw.barRaw : raw.bar || '',
       barValueCm: Number.isFinite(storedBarValue) ? storedBarValue : null,
       barUnitMode: raw.barUnitMode === 'metric' ? 'metric' : 'imperial',
-      result: raw.result === 'miss' ? 'miss' : 'make',
+      result: raw.result === 'miss' ? 'miss' : raw.result === 'make' ? 'make' : null,
       sessionType,
       barUp,
       note: raw.note || '',
@@ -65,7 +93,7 @@
   }
 
   function readJumps() {
-    const saved = localStorage.getItem(JUMP_STORAGE_KEY);
+    const saved = safeGetItem(JUMP_STORAGE_KEY);
     if (!saved) return [];
     try {
       const parsed = JSON.parse(saved);
@@ -78,7 +106,7 @@
   }
 
   function writeJumps(list) {
-    localStorage.setItem(JUMP_STORAGE_KEY, JSON.stringify(list));
+    return safeSetItem(JUMP_STORAGE_KEY, JSON.stringify(list));
   }
 
   window.AthleteStore = {
@@ -102,8 +130,8 @@
         createdAt: Date.now(),
       };
       athletes.push(athlete);
-      write(athletes);
-      return athlete;
+      const saved = write(athletes);
+      return saved ? athlete : null;
     },
     update(id, updates) {
       const athletes = read();
@@ -111,8 +139,8 @@
         if (athlete.id !== id) return athlete;
         return { ...athlete, ...updates };
       });
-      write(updated);
-      return this.getById(id);
+      const saved = write(updated);
+      return saved ? this.getById(id) : null;
     },
     remove(id) {
       const athletes = read();
@@ -141,7 +169,9 @@
       const normalizedSessionType = sessionType === 'competition' ? 'competition' : 'practice';
       const normalizedBarUp = typeof barUp === 'boolean' ? barUp : normalizedSessionType === 'competition';
 
-      if (!athleteId || !date || !result) return null;
+      const requireResult = normalizedSessionType === 'competition' || normalizedBarUp;
+
+      if (!athleteId || !date || (requireResult && !result)) return null;
       if (normalizedBarUp && !trimmedBar) return null;
 
       const jump = {
@@ -152,7 +182,7 @@
         barRaw: normalizedBarUp ? trimmedBar : '',
         barValueCm: normalizedBarUp && Number.isFinite(barValueCm) ? barValueCm : null,
         barUnitMode: barUnitMode === 'metric' ? 'metric' : 'imperial',
-        result: result === 'miss' ? 'miss' : 'make',
+        result: result === 'miss' ? 'miss' : result === 'make' ? 'make' : null,
         sessionType: normalizedSessionType,
         barUp: normalizedBarUp,
         note: trimmedNote,
@@ -161,13 +191,13 @@
 
       const jumps = readJumps();
       jumps.push(jump);
-      writeJumps(jumps);
-      return jump;
+      const saved = writeJumps(jumps);
+      return saved ? jump : null;
     },
   };
 
   function readSettings() {
-    const saved = localStorage.getItem(SETTINGS_KEY);
+    const saved = safeGetItem(SETTINGS_KEY);
     if (!saved) return { unitMode: 'imperial' };
     try {
       const parsed = JSON.parse(saved);
@@ -181,7 +211,7 @@
   }
 
   function writeSettings(settings) {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return safeSetItem(SETTINGS_KEY, JSON.stringify(settings));
   }
 
   window.SettingsStore = {
