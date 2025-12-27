@@ -167,7 +167,10 @@ const Storage = (() => {
      */
     function addJump(athleteId, jumpData) {
         const data = loadData();
-        const newJump = Object.assign({}, jumpData, {
+        const sanitizedJumpData = Object.assign({}, jumpData);
+        delete sanitizedJumpData.createdAt; // createdAt must always be set at save time
+
+        const newJump = Object.assign({}, sanitizedJumpData, {
             id: uuidv4(),
             athleteId,
             createdAt: new Date().toISOString(),
