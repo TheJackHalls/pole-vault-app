@@ -545,12 +545,38 @@
             backBtn.className = 'button-primary';
             backBtn.style.marginBottom = '8px';
             backBtn.addEventListener('click', () => {
-                renderAthleteDetailScreen(athlete.id);
+                const selectedId = document.getElementById('athleteSelect')?.value || athlete.id;
+                renderAthleteDetailScreen(selectedId);
             });
             container.appendChild(backBtn);
 
             const header = createScreenTitle(`New Jump – ${athlete.name}`);
             container.appendChild(header);
+
+            // Athlete dropdown (alphabetized). Allows quick switching without leaving the form.
+            const athletes = Storage.getAthletes();
+            const athleteSelectGroup = document.createElement('div');
+            athleteSelectGroup.className = 'field-group';
+            athleteSelectGroup.innerHTML = `
+                <label>Athlete
+                    <select id="athleteSelect">
+                        ${athletes
+                            .slice()
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(a => `<option value="${a.id}" ${a.id === athlete.id ? 'selected' : ''}>${a.name}</option>`)
+                            .join('')}
+                    </select>
+                </label>
+            `;
+            container.appendChild(athleteSelectGroup);
+
+            const athleteSelectEl = athleteSelectGroup.querySelector('#athleteSelect');
+            athleteSelectEl.addEventListener('change', () => {
+                const selected = Storage.getAthlete(athleteSelectEl.value);
+                if (selected) {
+                    renderNewJumpScreen(selected);
+                }
+            });
 
             // determine last jump to prefill
             const previousJumps = Storage.getJumpsForAthlete(athlete.id);
@@ -714,6 +740,22 @@
             // Build form HTML with prefilled values. Units are derived from last jump or global settings.
             form.innerHTML = `
                 <div class="field-group">
+                    <label>Session Type
+                        <div class="field-row" id="sessionTypeRow">
+                            <label style="margin-right:12px;"><input type="radio" name="sessionType" value="practice" checked> Practice</label>
+                            <label><input type="radio" name="sessionType" value="competition"> Competition</label>
+                        </div>
+                    </label>
+                </div>
+                <div class="field-group" id="barUpGroup">
+                    <label>Bar up?
+                        <div class="field-row" id="barUpRow">
+                            <label style="margin-right:12px;"><input type="radio" name="barUp" value="yes" checked> Yes</label>
+                            <label><input type="radio" name="barUp" value="no"> No</label>
+                        </div>
+                    </label>
+                </div>
+                <div class="field-group">
                     <label>Steps Count
                         <input type="number" id="stepsCount" value="${stepsCountVal}" inputmode="numeric" pattern="[0-9]*" min="0">
                     </label>
@@ -769,7 +811,7 @@
                         </div>
                     </label>
                 </div>
-                <div class="field-group">
+                <div class="field-group" id="barHeightGroup">
                     <label>Bar Height
                         <div class="field-row">
                             ${barUnitVal === 'imperial' ? `
@@ -935,7 +977,37 @@
             updateResultButtons();
             resultContainer.appendChild(makeBtn);
             resultContainer.appendChild(missBtn);
+            resultContainer.id = 'resultContainer';
             container.appendChild(resultContainer);
+
+            function toggleVisibilityForSession() {
+                const selectedSession = form.querySelector('input[name="sessionType"]:checked').value;
+                const barUpValue = form.querySelector('input[name="barUp"]:checked').value;
+                const barHeightGroup = form.querySelector('#barHeightGroup');
+                const resultSection = document.getElementById('resultContainer');
+                if (selectedSession === 'practice') {
+                    // Show/hide bar inputs and result buttons based on Bar up selection
+                    const showBar = barUpValue === 'yes';
+                    barHeightGroup.style.display = showBar ? 'block' : 'none';
+                    resultSection.style.display = showBar ? 'flex' : 'none';
+                } else {
+                    // competition always shows bar + result
+                    barHeightGroup.style.display = 'block';
+                    resultSection.style.display = 'flex';
+                }
+                // Bar Up controls only relevant in practice
+                const barUpGroup = document.getElementById('barUpGroup');
+                barUpGroup.style.display = selectedSession === 'practice' ? 'block' : 'none';
+            }
+
+            // Wire up session type and bar up toggles
+            form.querySelectorAll('input[name="sessionType"]').forEach(radio => {
+                radio.addEventListener('change', toggleVisibilityForSession);
+            });
+            form.querySelectorAll('input[name="barUp"]').forEach(radio => {
+                radio.addEventListener('change', toggleVisibilityForSession);
+            });
+            toggleVisibilityForSession();
 
             // Save button
             const saveBtn = document.createElement('button');
@@ -943,6 +1015,13 @@
             saveBtn.textContent = 'Save Jump';
             saveBtn.type = 'button';
             saveBtn.addEventListener('click', () => {
+                const selectedSession = form.querySelector('input[name="sessionType"]:checked').value;
+                const barUpValue = form.querySelector('input[name="barUp"]:checked').value;
+                const logAthlete = Storage.getAthlete(athleteSelectEl.value);
+                if (!logAthlete) {
+                    alert('Select an athlete to log the jump.');
+                    return;
+                }
                 // collect values
                 const stepsCount = form.querySelector('#stepsCount').value;
                 const stepsType = form.querySelector('#stepsType').value;
@@ -978,13 +1057,15 @@
                 // bar height
                 const barUnit = barUnitVal;
                 let barInchesCalc = null;
-                if (barUnit === 'imperial') {
-                    const feetVal = parseFloat(form.querySelector('#barFeet').value) || 0;
-                    const inchVal = parseFloat(form.querySelector('#barInchesInput').value) || 0;
-                    barInchesCalc = feetVal * 12 + inchVal;
-                } else {
-                    const mVal = parseFloat(form.querySelector('#barMeters').value) || 0;
-                    barInchesCalc = mVal * 39.3701;
+                if (selectedSession === 'competition' || (selectedSession === 'practice' && barUpValue === 'yes')) {
+                    if (barUnit === 'imperial') {
+                        const feetVal = parseFloat(form.querySelector('#barFeet').value) || 0;
+                        const inchVal = parseFloat(form.querySelector('#barInchesInput').value) || 0;
+                        barInchesCalc = feetVal * 12 + inchVal;
+                    } else {
+                        const mVal = parseFloat(form.querySelector('#barMeters').value) || 0;
+                        barInchesCalc = mVal * 39.3701;
+                    }
                 }
                 // standards
                 const standardsUnit = standardsUnitVal;
@@ -1054,10 +1135,10 @@
                     takeoffInches: takeoffInchesCalc !== null ? parseFloat(takeoffInchesCalc.toFixed(2)) : null,
                     takeoffUnit,
                     barHeightInches: barInchesCalc !== null ? parseFloat(barInchesCalc.toFixed(2)) : null,
-                    barHeightUnit: barUnit,
+                    barHeightUnit: barInchesCalc !== null ? barUnit : null,
                     standardsInches: parseFloat(standardsInchesCalc.toFixed(2)),
                     standardsUnit,
-                    result: selectedResult,
+                    result: (selectedSession === 'competition' || (selectedSession === 'practice' && barUpValue === 'yes')) ? selectedResult : null,
                     notes,
                     // New fields
                     approachInches: approachInchesCalc !== null ? parseFloat(approachInchesCalc.toFixed(2)) : null,
@@ -1069,8 +1150,8 @@
                     hitCoachMark: enableCoachMark ? hitCoachMark : null,
                     hitTakeoffStep: enableTakeoffStepCheck ? hitTakeoffStep : null
                 };
-                Storage.addJump(athlete.id, jumpData);
-                renderAthleteDetailScreen(athlete.id);
+                Storage.addJump(logAthlete.id, jumpData);
+                renderAthleteDetailScreen(logAthlete.id);
             });
             container.appendChild(saveBtn);
         });
@@ -1236,7 +1317,7 @@
             } else {
                 addItem('Bar Height', '');
             }
-            addItem('Result', jump.result);
+            addItem('Result', jump.result || '');
             addItem('Notes', jump.notes || '');
             addItem('Recorded', formatDate(jump.createdAt));
 
