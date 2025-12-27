@@ -16,6 +16,13 @@ h1, h2, h3 {
     margin: 0 0 8px;
 }
 
+.screen-title {
+    margin: 0 0 12px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
 .screen {
     display: none;
 }
