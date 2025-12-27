@@ -384,29 +384,25 @@
         app.appendChild(screen);
     }
 
+    function createScreenTitle(text) {
+        const title = document.createElement('h1');
+        title.className = 'screen-title';
+        title.textContent = text;
+        return title;
+    }
+
     /**
      * Render the Athletes List screen. Shows all athletes and provides a
      * collapsible form to add a new athlete.
      * @param {HTMLElement} container
      */
     function renderAthletesList(container) {
-        const header = document.createElement('h1');
-        header.textContent = 'Athletes';
+        const header = createScreenTitle('Athletes');
         container.appendChild(header);
-
 
         const list = document.createElement('ul');
         list.className = 'list';
         const athletes = Storage.getAthletes();
-        if (athletes.length > 0) {
-            // hint for user
-            const hint = document.createElement('p');
-            hint.style.fontSize = '14px';
-            hint.style.marginBottom = '8px';
-            hint.style.color = '#666';
-            hint.textContent = 'Tap an athlete to view details and log jumps.';
-            container.appendChild(hint);
-        }
         athletes.forEach(athlete => {
             const li = document.createElement('li');
             li.className = 'list-item';
@@ -484,8 +480,7 @@
             });
             container.appendChild(backBtn);
 
-            const header = document.createElement('h2');
-            header.textContent = athlete.name;
+            const header = createScreenTitle(athlete.name);
             container.appendChild(header);
             const info = document.createElement('p');
             info.textContent = `${athlete.gender}, ${athlete.weightLbs} lbs`;
@@ -554,8 +549,7 @@
             });
             container.appendChild(backBtn);
 
-            const header = document.createElement('h2');
-            header.textContent = `New Jump – ${athlete.name}`;
+            const header = createScreenTitle(`New Jump – ${athlete.name}`);
             container.appendChild(header);
 
             // determine last jump to prefill
@@ -1103,8 +1097,7 @@
                 renderAthleteDetailScreen(jump.athleteId);
             });
             container.appendChild(backBtn);
-            const header = document.createElement('h2');
-            header.textContent = `${athlete?.name || ''} – Jump Detail`;
+            const header = createScreenTitle(`${athlete?.name || ''} – Jump Detail`);
             container.appendChild(header);
 
             const detailList = document.createElement('ul');
