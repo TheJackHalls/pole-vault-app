@@ -6,9 +6,9 @@
  * background sync and more complex caching strategies.
  */
 
-// Updated cache name for Taykof v0.7.0. Increment this value whenever
+// Updated cache name for Taykof v0.4.1. Increment this value whenever
 // making changes to the cached files so the service worker picks up the new assets.
-const CACHE_NAME = 'taykof-cache-v3';
+const CACHE_NAME = 'taykof-cache-v041';
 /*
  * Determine the base path for caching resources. When deployed under a
  * subpath (e.g. GitHub Pages), the service worker will be located at
@@ -34,14 +34,14 @@ const URLS_TO_CACHE = [
   return BASE_PATH + normalized;
 });
 
+const ASSET_REFRESH_PATTERN = /\.(?:js|css)$/i;
+
 self.addEventListener('install', event => {
   // Take control of the page immediately after installation.
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(URLS_TO_CACHE);
-      })
+      .then(cache => cache.addAll(URLS_TO_CACHE))
   );
 });
 
@@ -59,14 +59,41 @@ self.addEventListener('activate', event => {
         })
       );
       await self.clients.claim();
+      await self.skipWaiting();
     })()
   );
 });
 
 self.addEventListener('fetch', event => {
+  const { request } = event;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  if (ASSET_REFRESH_PATTERN.test(new URL(request.url).pathname)) {
+    event.respondWith(
+      (async () => {
+        try {
+          const networkResponse = await fetch(request, { cache: 'reload' });
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, networkResponse.clone());
+          return networkResponse;
+        } catch (error) {
+          const cachedResponse = await caches.match(request);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          throw error;
+        }
+      })()
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+    caches.match(request).then(response => {
+      return response || fetch(request);
     })
   );
 });
