@@ -1,3 +1,15 @@
+# Taykof PWA — Master Plan
+
+Current stable version: v0.3.0  
+Last updated: 2025-12-27
+
+---
+
+## Purpose of This Document
+
+This document is the single source of truth for how Taykof is built and evolved.
+
+
 ## Global UI Standards
 
 These rules apply across all tabs/screens:
