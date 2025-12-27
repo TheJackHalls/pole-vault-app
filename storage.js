@@ -139,6 +139,25 @@ const Storage = (() => {
     }
 
     /**
+     * Resolve the timestamp for a jump, preferring createdAt and falling back
+     * to any legacy date field. Returns 0 if no valid date is present.
+     * @param {object} jump
+     * @returns {number}
+     */
+    function getJumpTimestamp(jump) {
+        if (!jump) return 0;
+        if (jump.createdAt) {
+            const ts = Date.parse(jump.createdAt);
+            if (!isNaN(ts)) return ts;
+        }
+        if (jump.date) {
+            const ts = Date.parse(jump.date);
+            if (!isNaN(ts)) return ts;
+        }
+        return 0;
+    }
+
+    /**
      * Return all jumps for a given athlete sorted by most recent first.
      * @param {string} athleteId
      * @returns {Array}
@@ -146,7 +165,7 @@ const Storage = (() => {
     function getJumpsForAthlete(athleteId) {
         const data = loadData();
         return data.jumps.filter(j => j.athleteId === athleteId)
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            .sort((a, b) => getJumpTimestamp(b) - getJumpTimestamp(a));
     }
 
     /**
