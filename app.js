@@ -319,7 +319,7 @@
             const jumpRows = data.jumps.map(j => ({
             jump_id: j.id,
             athlete_id: j.athleteId,
-            created_at: j.createdAt,
+            created_at: j.createdAt ?? j.date ?? '',
             steps_count: j.stepsCount ?? '',
             steps_type: j.stepsType ?? '',
             pole_brand: j.poleBrand ?? '',
@@ -369,6 +369,26 @@
             minute: 'numeric'
         };
         return new Intl.DateTimeFormat(undefined, options).format(date);
+    }
+
+    /**
+     * Resolve the best available date for a jump, preferring createdAt and
+     * falling back to any legacy date field. Returns null when no valid date
+     * can be parsed.
+     * @param {object} jump
+     * @returns {Date|null}
+     */
+    function resolveJumpDate(jump) {
+        if (!jump) return null;
+        if (jump.createdAt) {
+            const created = new Date(jump.createdAt);
+            if (!isNaN(created)) return created;
+        }
+        if (jump.date) {
+            const legacy = new Date(jump.date);
+            if (!isNaN(legacy)) return legacy;
+        }
+        return null;
     }
 
     /**
@@ -521,7 +541,9 @@
                         }
                     }
                     const resultLabel = jump.result ? jump.result.charAt(0).toUpperCase() + jump.result.slice(1) : '';
-                    li.innerHTML = `<strong>${barDisplay}</strong> - ${resultLabel}<span>${formatDate(jump.createdAt)}</span>`;
+                    const jumpDate = resolveJumpDate(jump);
+                    const dateLabel = jumpDate ? formatDate(jumpDate) : '';
+                    li.innerHTML = `<strong>${barDisplay}</strong> - ${resultLabel}<span>${dateLabel}</span>`;
                     li.addEventListener('click', () => {
                         renderJumpDetailScreen(jump.id);
                     });
@@ -1319,7 +1341,8 @@
             }
             addItem('Result', jump.result || '');
             addItem('Notes', jump.notes || '');
-            addItem('Recorded', formatDate(jump.createdAt));
+            const recordedDate = resolveJumpDate(jump);
+            addItem('Recorded', recordedDate ? formatDate(recordedDate) : '');
 
             container.appendChild(detailList);
 

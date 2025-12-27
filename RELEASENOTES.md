@@ -7,6 +7,22 @@ Keep this file short and practical. Each release should answer:
 
 ---
 
+## v0.4.2 — Log: remove manual date; reorder fields; athlete dropdown sorted.
+Date: YYYY-MM-DD
+
+Changed
+- Log form now timestamps automatically; manual date input removed.
+- Athlete dropdown sorted alphabetically and session type follows athlete in the flow.
+
+Test on iPhone
+- Clear and log ~20 jumps quickly (practice and competition) to confirm timestamps and bar-up behavior.
+- Verify athlete picker ordering.
+
+Known issues
+- (none / list here)
+
+---
+
 ## v0.2.1 — Stabilization (iOS reliability)
 Date: YYYY-MM-DD
 
