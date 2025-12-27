@@ -1,6 +1,6 @@
 # Taykof PWA — Master Plan
 
-Current stable version: v0.3.0  
+Current stable version: v0.4.1  
 Last updated: 2025-12-27
 
 ---
