@@ -777,6 +777,20 @@
                         </div>
                     </label>
                 </div>
+                <div class="field-group" id="barHeightGroup">
+                    <label>Bar Height
+                        <div class="field-row">
+                            ${barUnitVal === 'imperial' ? `
+                                <input type="number" id="barFeet" class="field-number" value="${barFeetVal}" min="0" step="1">
+                                <input type="number" id="barInchesInput" class="field-number" value="${barInchesRemVal}" min="0" step="0.1">
+                                <span class="unit-pill">ft/in</span>
+                            ` : `
+                                <input type="number" id="barMeters" class="field-number" value="${barMetersVal}" min="0" step="0.01">
+                                <span class="unit-pill">m</span>
+                            `}
+                        </div>
+                    </label>
+                </div>
                 <div class="field-group">
                     <label>Steps Count
                         <input type="number" id="stepsCount" value="${stepsCountVal}" inputmode="numeric" pattern="[0-9]*" min="0">
@@ -828,20 +842,6 @@
                                 <span class="unit-pill">ft/in</span>
                             ` : `
                                 <input type="number" id="takeoffMeters" class="field-number" value="${takeoffMetersVal}" min="0" step="0.01">
-                                <span class="unit-pill">m</span>
-                            `}
-                        </div>
-                    </label>
-                </div>
-                <div class="field-group" id="barHeightGroup">
-                    <label>Bar Height
-                        <div class="field-row">
-                            ${barUnitVal === 'imperial' ? `
-                                <input type="number" id="barFeet" class="field-number" value="${barFeetVal}" min="0" step="1">
-                                <input type="number" id="barInchesInput" class="field-number" value="${barInchesRemVal}" min="0" step="0.1">
-                                <span class="unit-pill">ft/in</span>
-                            ` : `
-                                <input type="number" id="barMeters" class="field-number" value="${barMetersVal}" min="0" step="0.01">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
