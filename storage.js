@@ -56,7 +56,7 @@
       barRaw: typeof raw.barRaw === 'string' ? raw.barRaw : raw.bar || '',
       barValueCm: Number.isFinite(storedBarValue) ? storedBarValue : null,
       barUnitMode: raw.barUnitMode === 'metric' ? 'metric' : 'imperial',
-      result: raw.result === 'miss' ? 'miss' : 'make',
+      result: raw.result === 'miss' ? 'miss' : raw.result === 'make' ? 'make' : null,
       sessionType,
       barUp,
       note: raw.note || '',
@@ -141,7 +141,11 @@
       const normalizedSessionType = sessionType === 'competition' ? 'competition' : 'practice';
       const normalizedBarUp = typeof barUp === 'boolean' ? barUp : normalizedSessionType === 'competition';
 
-      if (!athleteId || !date || !result) return null;
+      const hasResult = result === 'make' || result === 'miss';
+      const requiresResult = normalizedBarUp || normalizedSessionType === 'competition';
+
+      if (!athleteId || !date) return null;
+      if (requiresResult && !hasResult) return null;
       if (normalizedBarUp && !trimmedBar) return null;
 
       const jump = {
@@ -152,7 +156,7 @@
         barRaw: normalizedBarUp ? trimmedBar : '',
         barValueCm: normalizedBarUp && Number.isFinite(barValueCm) ? barValueCm : null,
         barUnitMode: barUnitMode === 'metric' ? 'metric' : 'imperial',
-        result: result === 'miss' ? 'miss' : 'make',
+        result: hasResult ? (result === 'miss' ? 'miss' : 'make') : null,
         sessionType: normalizedSessionType,
         barUp: normalizedBarUp,
         note: trimmedNote,
