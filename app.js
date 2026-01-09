@@ -17,7 +17,7 @@
      * units and step type used when creating a new jump. These settings do not
      * modify existing stored data and are stored under a separate key from the
      * core data model.
-     * @returns {{stepsType: string, gripUnit: string, takeoffUnit: string, barUnit: string, standardsUnit: string}}
+     * @returns {{stepsType: string, gripUnit: string, takeoffUnit: string, barUnit: string, standardsUnit: string, poleUnit: string}}
      */
     function getSettings() {
         const defaultSettings = {
@@ -28,6 +28,8 @@
             takeoffUnit: 'imperial',
             barUnit: 'imperial',
             standardsUnit: 'inches',
+            // Default units for poles (imperial/metric)
+            poleUnit: 'imperial',
             // Default unit for the approach mark (imperial/metric)
             approachUnit: 'imperial',
             // Whether the coach's intermediate mark should be used at all
@@ -110,6 +112,12 @@
                         <option value="cm" ${current.standardsUnit === 'cm' ? 'selected' : ''}>Centimeters</option>
                     </select>
                 </label>
+                <label>Default Pole Units
+                    <select id="setPoleUnit">
+                        <option value="imperial" ${current.poleUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
+                        <option value="metric" ${current.poleUnit === 'metric' ? 'selected' : ''}>Metric (m/cm)</option>
+                    </select>
+                </label>
                 <label>Default Approach Units
                     <select id="setApproachUnit">
                         <option value="imperial" ${current.approachUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
@@ -174,6 +182,7 @@
                 takeoffUnit: modal.querySelector('#setTakeoffUnit').value,
                 barUnit: modal.querySelector('#setBarUnit').value,
                 standardsUnit: modal.querySelector('#setStandardsUnit').value,
+                poleUnit: modal.querySelector('#setPoleUnit').value,
                 approachUnit: modal.querySelector('#setApproachUnit').value,
                 enableCoachMark: modal.querySelector('#setEnableCoachMark').checked,
                 coachMarkType: modal.querySelector('#setCoachMarkType').value,
@@ -412,6 +421,143 @@
     }
 
     /**
+     * Render the Poles screen, showing saved poles and an Add Pole action.
+     */
+    function renderPolesScreen() {
+        navigate(container => {
+            // Back button
+            const backBtn = document.createElement('button');
+            backBtn.textContent = '← Back';
+            backBtn.className = 'button-primary';
+            backBtn.style.marginBottom = '8px';
+            backBtn.addEventListener('click', () => {
+                navigate(renderAthletesList);
+            });
+            container.appendChild(backBtn);
+
+            const header = createScreenTitle('Poles');
+            container.appendChild(header);
+
+            const addPoleBtn = document.createElement('button');
+            addPoleBtn.className = 'button-primary';
+            addPoleBtn.textContent = 'Add Pole';
+            container.appendChild(addPoleBtn);
+
+            const sectionTitle = document.createElement('h3');
+            sectionTitle.className = 'section-title';
+            sectionTitle.textContent = 'Pole Bag';
+            container.appendChild(sectionTitle);
+
+            const poles = Storage.getPoles();
+            if (poles.length === 0) {
+                const empty = document.createElement('p');
+                empty.textContent = 'No poles saved yet.';
+                container.appendChild(empty);
+            } else {
+                const list = document.createElement('ul');
+                list.className = 'list';
+                poles.forEach(pole => {
+                    const li = document.createElement('li');
+                    li.className = 'list-item';
+                    const weightLabel = pole.weight ? `${pole.weight} lb` : '';
+                    const label = `${pole.brand || ''} ${weightLabel} ${pole.length || ''}`.replace(/\s+/g, ' ').trim();
+                    li.innerHTML = `<span>${label}</span>`;
+                    list.appendChild(li);
+                });
+                container.appendChild(list);
+            }
+
+            function renderAddPoleModal() {
+                const settings = getSettings();
+                const savedPoles = Storage.getPoles();
+                const brands = Array.from(new Set(savedPoles.map(p => p.brand).filter(Boolean)));
+                const overlay = document.createElement('div');
+                overlay.className = 'modal-overlay';
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                const isMetric = settings.poleUnit === 'metric';
+                const feetOptions = Array.from({ length: 13 }, (_, idx) => 6 + idx)
+                    .map(val => `<option value="${val}">${val}</option>`)
+                    .join('');
+                const inchesOptions = Array.from({ length: 12 }, (_, idx) => 1 + idx)
+                    .map(val => `<option value="${val}">${val}</option>`)
+                    .join('');
+                const meterOptions = Array.from({ length: 6 }, (_, idx) => 1 + idx)
+                    .map(val => `<option value="${val}">${val}</option>`)
+                    .join('');
+                const centimeterOptions = Array.from({ length: 100 }, (_, idx) => idx)
+                    .map(val => `<option value="${val}">${val}</option>`)
+                    .join('');
+                modal.innerHTML = `
+                    <h2>Add Pole</h2>
+                    <label>Brand
+                        <input type="text" id="poleBrandInput" list="poleBrandList" placeholder="Select or type a brand">
+                        <datalist id="poleBrandList">
+                            ${brands.map(brand => `<option value="${brand}"></option>`).join('')}
+                        </datalist>
+                    </label>
+                    <label>Length
+                        <div class="field-row">
+                            ${isMetric ? `
+                                <select id="poleMeters">${meterOptions}</select>
+                                <span class="unit-pill">m</span>
+                                <select id="poleCentimeters">${centimeterOptions}</select>
+                                <span class="unit-pill">cm</span>
+                            ` : `
+                                <select id="poleFeet">${feetOptions}</select>
+                                <span class="unit-pill">ft</span>
+                                <select id="poleInches">${inchesOptions}</select>
+                                <span class="unit-pill">in</span>
+                            `}
+                        </div>
+                    </label>
+                    <label>Weight
+                        <input type="text" id="poleWeightInput" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="lbs">
+                    </label>
+                    <div class="button-group">
+                        <button class="save-settings-btn" type="button" id="savePoleBtn">Save</button>
+                        <button class="cancel-settings-btn" type="button" id="cancelPoleBtn">Cancel</button>
+                    </div>
+                `;
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+
+                const weightInput = modal.querySelector('#poleWeightInput');
+                weightInput.addEventListener('input', () => {
+                    weightInput.value = weightInput.value.replace(/\D/g, '').slice(0, 3);
+                });
+
+                modal.querySelector('#cancelPoleBtn').addEventListener('click', () => {
+                    document.body.removeChild(overlay);
+                });
+                modal.querySelector('#savePoleBtn').addEventListener('click', () => {
+                    const brand = modal.querySelector('#poleBrandInput').value.trim();
+                    let length = '';
+                    if (isMetric) {
+                        const meters = modal.querySelector('#poleMeters').value;
+                        const centimeters = modal.querySelector('#poleCentimeters').value;
+                        length = `${meters} m ${centimeters} cm`;
+                    } else {
+                        const feet = modal.querySelector('#poleFeet').value;
+                        const inches = modal.querySelector('#poleInches').value;
+                        length = `${feet}' ${inches}"`;
+                    }
+                    const weight = weightInput.value.trim();
+                    if (!brand || !length || !weight) {
+                        alert('Please enter a brand, length, and weight.');
+                        return;
+                    }
+                    Storage.addPole({ brand, weight, length });
+                    document.body.removeChild(overlay);
+                    renderPolesScreen();
+                });
+            }
+
+            addPoleBtn.addEventListener('click', renderAddPoleModal);
+        });
+    }
+
+    /**
      * Render the Athletes List screen. Shows all athletes and provides a
      * collapsible form to add a new athlete.
      * @param {HTMLElement} container
@@ -419,6 +565,14 @@
     function renderAthletesList(container) {
         const header = createScreenTitle('Athletes');
         container.appendChild(header);
+
+        const polesBtn = document.createElement('button');
+        polesBtn.className = 'button-primary';
+        polesBtn.textContent = 'Pole Bag';
+        polesBtn.addEventListener('click', () => {
+            renderPolesScreen();
+        });
+        container.appendChild(polesBtn);
 
         const list = document.createElement('ul');
         list.className = 'list';

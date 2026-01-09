@@ -23,6 +23,13 @@ h1, h2, h3 {
     color: #0f172a;
 }
 
+.section-title {
+    margin: 16px 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
 .screen {
     display: none;
 }
