@@ -1147,6 +1147,7 @@
                     hitTakeoffStep = form.querySelector('#hitTakeoffStep').checked;
                 }
                 const jumpData = {
+                    createdAt: new Date().toISOString(),
                     stepsCount: stepsCount === '' ? null : parseInt(stepsCount, 10),
                     stepsType,
                     poleBrand,

@@ -187,12 +187,18 @@ const Storage = (() => {
     function addJump(athleteId, jumpData) {
         const data = loadData();
         const sanitizedJumpData = Object.assign({}, jumpData);
-        delete sanitizedJumpData.createdAt; // createdAt must always be set at save time
+        delete sanitizedJumpData.date; // remove legacy manual date input if present
+
+        let createdAt = sanitizedJumpData.createdAt;
+        if (!createdAt || isNaN(Date.parse(createdAt))) {
+            createdAt = new Date().toISOString();
+        }
+        delete sanitizedJumpData.createdAt;
 
         const newJump = Object.assign({}, sanitizedJumpData, {
             id: uuidv4(),
             athleteId,
-            createdAt: new Date().toISOString(),
+            createdAt
         });
         data.jumps.push(newJump);
         saveData(data);
