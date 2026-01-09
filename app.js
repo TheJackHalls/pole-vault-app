@@ -381,6 +381,30 @@
     }
 
     /**
+     * Escape HTML-sensitive characters to avoid injection when using innerHTML.
+     * @param {string|number|null|undefined} value
+     * @returns {string}
+     */
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => {
+            switch (char) {
+                case '&':
+                    return '&amp;';
+                case '<':
+                    return '&lt;';
+                case '>':
+                    return '&gt;';
+                case '"':
+                    return '&quot;';
+                case "'":
+                    return '&#39;';
+                default:
+                    return char;
+            }
+        });
+    }
+
+    /**
      * Resolve the best available date for a jump, preferring createdAt and
      * falling back to any legacy date field. Returns null when no valid date
      * can be parsed.
@@ -461,7 +485,9 @@
                     li.className = 'list-item';
                     const weightLabel = pole.weight ? `${pole.weight} lb` : '';
                     const label = `${pole.brand || ''} ${weightLabel} ${pole.length || ''}`.replace(/\s+/g, ' ').trim();
-                    li.innerHTML = `<span>${label}</span>`;
+                    const span = document.createElement('span');
+                    span.textContent = label;
+                    li.appendChild(span);
                     list.appendChild(li);
                 });
                 container.appendChild(list);
@@ -493,7 +519,7 @@
                     <label>Brand
                         <input type="text" id="poleBrandInput" list="poleBrandList" placeholder="Select or type a brand">
                         <datalist id="poleBrandList">
-                            ${brands.map(brand => `<option value="${brand}"></option>`).join('')}
+                            ${brands.map(brand => `<option value="${escapeHtml(brand)}"></option>`).join('')}
                         </datalist>
                     </label>
                     <label>Length
@@ -581,7 +607,14 @@
             const li = document.createElement('li');
             li.className = 'list-item';
             // display name and arrow to indicate clickable
-            li.innerHTML = `<span>${athlete.name}</span><span style="font-size:20px; color:#003366;">›</span>`;
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = athlete.name;
+            const arrowSpan = document.createElement('span');
+            arrowSpan.textContent = '›';
+            arrowSpan.style.fontSize = '20px';
+            arrowSpan.style.color = '#003366';
+            li.appendChild(nameSpan);
+            li.appendChild(arrowSpan);
             li.style.justifyContent = 'space-between';
             li.addEventListener('click', () => {
                 renderAthleteDetailScreen(athlete.id);
@@ -697,7 +730,14 @@
                     const resultLabel = jump.result ? jump.result.charAt(0).toUpperCase() + jump.result.slice(1) : '';
                     const jumpDate = resolveJumpDate(jump);
                     const dateLabel = jumpDate ? formatDate(jumpDate) : '';
-                    li.innerHTML = `<strong>${barDisplay}</strong> - ${resultLabel}<span>${dateLabel}</span>`;
+                    const barStrong = document.createElement('strong');
+                    barStrong.textContent = barDisplay;
+                    const resultText = document.createTextNode(` - ${resultLabel}`);
+                    const dateSpan = document.createElement('span');
+                    dateSpan.textContent = dateLabel;
+                    li.appendChild(barStrong);
+                    li.appendChild(resultText);
+                    li.appendChild(dateSpan);
                     li.addEventListener('click', () => {
                         renderJumpDetailScreen(jump.id);
                     });
@@ -739,7 +779,7 @@
                         ${athletes
                             .slice()
                             .sort((a, b) => a.name.localeCompare(b.name))
-                            .map(a => `<option value="${a.id}" ${a.id === athlete.id ? 'selected' : ''}>${a.name}</option>`)
+                            .map(a => `<option value="${escapeHtml(a.id)}" ${a.id === athlete.id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`)
                             .join('')}
                     </select>
                 </label>
@@ -773,7 +813,7 @@
                 const key = `${pole.brand}|${pole.weight}|${pole.length}`;
                 const label = `${pole.brand} – ${pole.weight} – ${pole.length}`;
                 const selected = (pole.brand === poleBrandVal && pole.weight === poleWeightVal && pole.length === poleLengthVal) ? 'selected' : '';
-                poleOptionsHtml += `<option value="${key}" ${selected}>${label}</option>`;
+                poleOptionsHtml += `<option value="${escapeHtml(key)}" ${selected}>${escapeHtml(label)}</option>`;
             });
             // Measurement helpers
             function inchesToFeetInches(totalInches) {
@@ -913,6 +953,27 @@
             const notesVal = lastJump?.notes ?? '';
 
             const form = document.createElement('form');
+            const safeStepsCountVal = escapeHtml(stepsCountVal);
+            const safePoleBrandVal = escapeHtml(poleBrandVal);
+            const safePoleWeightVal = escapeHtml(poleWeightVal);
+            const safePoleLengthVal = escapeHtml(poleLengthVal);
+            const safeGripFeetVal = escapeHtml(gripFeetVal);
+            const safeGripInchesRemVal = escapeHtml(gripInchesRemVal);
+            const safeGripMetersVal = escapeHtml(gripMetersVal);
+            const safeTakeoffFeetVal = escapeHtml(takeoffFeetVal);
+            const safeTakeoffInchesRemVal = escapeHtml(takeoffInchesRemVal);
+            const safeTakeoffMetersVal = escapeHtml(takeoffMetersVal);
+            const safeBarFeetVal = escapeHtml(barFeetVal);
+            const safeBarInchesRemVal = escapeHtml(barInchesRemVal);
+            const safeBarMetersVal = escapeHtml(barMetersVal);
+            const safeApproachFeetVal = escapeHtml(approachFeetVal);
+            const safeApproachInchesRemVal = escapeHtml(approachInchesRemVal);
+            const safeApproachMetersVal = escapeHtml(approachMetersVal);
+            const safeCoachFeetVal = escapeHtml(coachFeetVal);
+            const safeCoachInchesRemVal = escapeHtml(coachInchesRemVal);
+            const safeCoachMetersVal = escapeHtml(coachMetersVal);
+            const safeCoachStepVal = escapeHtml(coachStepVal);
+            const safeNotesVal = escapeHtml(notesVal);
             // Build form HTML with prefilled values. Units are derived from last jump or global settings.
             form.innerHTML = `
                 <div class="field-group">
@@ -935,11 +996,11 @@
                     <label>Bar Height
                         <div class="field-row">
                             ${barUnitVal === 'imperial' ? `
-                                <input type="number" id="barFeet" class="field-number" value="${barFeetVal}" min="0" step="1">
-                                <input type="number" id="barInchesInput" class="field-number" value="${barInchesRemVal}" min="0" step="0.1">
+                                <input type="number" id="barFeet" class="field-number" value="${safeBarFeetVal}" min="0" step="1">
+                                <input type="number" id="barInchesInput" class="field-number" value="${safeBarInchesRemVal}" min="0" step="0.1">
                                 <span class="unit-pill">ft/in</span>
                             ` : `
-                                <input type="number" id="barMeters" class="field-number" value="${barMetersVal}" min="0" step="0.01">
+                                <input type="number" id="barMeters" class="field-number" value="${safeBarMetersVal}" min="0" step="0.01">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
@@ -947,7 +1008,7 @@
                 </div>
                 <div class="field-group">
                     <label>Steps Count
-                        <input type="number" id="stepsCount" value="${stepsCountVal}" inputmode="numeric" pattern="[0-9]*" min="0">
+                        <input type="number" id="stepsCount" value="${safeStepsCountVal}" inputmode="numeric" pattern="[0-9]*" min="0">
                     </label>
                     <label>Steps Type
                         <select id="stepsType">
@@ -964,24 +1025,24 @@
                         </select>
                     </label>
                     <label>Brand
-                        <input type="text" id="poleBrand" value="${poleBrandVal}">
+                        <input type="text" id="poleBrand" value="${safePoleBrandVal}">
                     </label>
                     <label>Weight
-                        <input type="text" id="poleWeight" value="${poleWeightVal}">
+                        <input type="text" id="poleWeight" value="${safePoleWeightVal}">
                     </label>
                     <label>Length
-                        <input type="text" id="poleLength" value="${poleLengthVal}">
+                        <input type="text" id="poleLength" value="${safePoleLengthVal}">
                     </label>
                 </div>
                 <div class="field-group">
                     <label>Grip
                         <div class="field-row">
                             ${gripUnitVal === 'imperial' ? `
-                                <input type="number" id="gripFeet" class="field-number" value="${gripFeetVal}" min="0" step="1">
-                                <input type="number" id="gripInchesInput" class="field-number" value="${gripInchesRemVal}" min="0" step="0.1">
+                                <input type="number" id="gripFeet" class="field-number" value="${safeGripFeetVal}" min="0" step="1">
+                                <input type="number" id="gripInchesInput" class="field-number" value="${safeGripInchesRemVal}" min="0" step="0.1">
                                 <span class="unit-pill">ft/in</span>
                             ` : `
-                                <input type="number" id="gripMeters" class="field-number" value="${gripMetersVal}" min="0" step="0.01">
+                                <input type="number" id="gripMeters" class="field-number" value="${safeGripMetersVal}" min="0" step="0.01">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
@@ -991,11 +1052,11 @@
                     <label>Takeoff
                         <div class="field-row">
                             ${takeoffUnitVal === 'imperial' ? `
-                                <input type="number" id="takeoffFeet" class="field-number" value="${takeoffFeetVal}" min="0" step="1">
-                                <input type="number" id="takeoffInchesInput" class="field-number" value="${takeoffInchesRemVal}" min="0" step="0.1">
+                                <input type="number" id="takeoffFeet" class="field-number" value="${safeTakeoffFeetVal}" min="0" step="1">
+                                <input type="number" id="takeoffInchesInput" class="field-number" value="${safeTakeoffInchesRemVal}" min="0" step="0.1">
                                 <span class="unit-pill">ft/in</span>
                             ` : `
-                                <input type="number" id="takeoffMeters" class="field-number" value="${takeoffMetersVal}" min="0" step="0.01">
+                                <input type="number" id="takeoffMeters" class="field-number" value="${safeTakeoffMetersVal}" min="0" step="0.01">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
@@ -1006,11 +1067,11 @@
                     <label>Approach Mark
                         <div class="field-row">
                             ${approachUnitVal === 'imperial' ? `
-                                <input type="number" id="approachFeet" class="field-number" value="${approachFeetVal}" min="0" step="1">
-                                <input type="number" id="approachInchesInput" class="field-number" value="${approachInchesRemVal}" min="0" step="1">
+                                <input type="number" id="approachFeet" class="field-number" value="${safeApproachFeetVal}" min="0" step="1">
+                                <input type="number" id="approachInchesInput" class="field-number" value="${safeApproachInchesRemVal}" min="0" step="1">
                                 <span class="unit-pill">ft/in</span>
                             ` : `
-                                <input type="number" id="approachMeters" class="field-number" value="${approachMetersVal}" min="0" step="0.01">
+                                <input type="number" id="approachMeters" class="field-number" value="${safeApproachMetersVal}" min="0" step="0.01">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
@@ -1022,15 +1083,15 @@
                         <div class="field-row">
                             ${enableCoachMark && coachMarkTypeVal === 'distance' ? `
                                 ${coachMarkUnitVal === 'imperial' ? `
-                                    <input type="number" id="coachFeet" class="field-number" value="${coachFeetVal}" min="0" step="1">
-                                    <input type="number" id="coachInchesInput" class="field-number" value="${coachInchesRemVal}" min="0" step="1">
+                                    <input type="number" id="coachFeet" class="field-number" value="${safeCoachFeetVal}" min="0" step="1">
+                                    <input type="number" id="coachInchesInput" class="field-number" value="${safeCoachInchesRemVal}" min="0" step="1">
                                     <span class="unit-pill">ft/in</span>
                                 ` : `
-                                    <input type="number" id="coachMeters" class="field-number" value="${coachMetersVal}" min="0" step="0.01">
+                                    <input type="number" id="coachMeters" class="field-number" value="${safeCoachMetersVal}" min="0" step="0.01">
                                     <span class="unit-pill">m</span>
                                 `}
                             ` : `
-                                <input type="number" id="coachStep" class="field-number" value="${coachStepVal}" min="0" step="1">
+                                <input type="number" id="coachStep" class="field-number" value="${safeCoachStepVal}" min="0" step="1">
                                 <span class="unit-pill">steps</span>
                             `}
                         </div>
@@ -1050,7 +1111,7 @@
                     </label>
                 </div>
                 <label>Notes (optional)
-                    <textarea id="notes">${notesVal}</textarea>
+                    <textarea id="notes">${safeNotesVal}</textarea>
                 </label>
             `;
             container.appendChild(form);
