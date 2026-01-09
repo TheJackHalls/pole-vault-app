@@ -38,6 +38,8 @@
   const barHelper = document.getElementById('bar-helper');
 
   let currentAthleteId = null;
+  let previousSessionType = null;
+  let lastPracticeBarUp = null;
 
   const placeholderContent = {
     poles: {
@@ -331,8 +333,27 @@
     const barUpYes = Array.from(logBarUpInputs).find((input) => input.value === 'yes');
     const barUpNo = Array.from(logBarUpInputs).find((input) => input.value === 'no');
 
+    if (previousSessionType === null) {
+      previousSessionType = sessionType;
+    }
+
+    if (isCompetition && previousSessionType !== 'competition' && selectedBarUp !== null) {
+      lastPracticeBarUp = selectedBarUp;
+    }
+
+    if (!isCompetition && previousSessionType === 'practice' && selectedBarUp !== null) {
+      lastPracticeBarUp = selectedBarUp;
+    }
+
     if (isCompetition && barUpYes) {
       barUpYes.checked = true;
+    } else if (!isCompetition && lastPracticeBarUp !== null) {
+      if (lastPracticeBarUp && barUpYes) {
+        barUpYes.checked = true;
+      }
+      if (!lastPracticeBarUp && barUpNo) {
+        barUpNo.checked = true;
+      }
     }
 
     if (barUpYes) {
@@ -345,7 +366,7 @@
       }
     }
 
-    const barUp = isCompetition ? true : selectedBarUp === true;
+    const barUp = isCompetition ? true : getSelectedBarUp() === true;
 
     if (logBarUpField) {
       logBarUpField.style.display = '';
@@ -378,6 +399,8 @@
     } else {
       logBarInput.setAttribute('required', 'required');
     }
+
+    previousSessionType = sessionType;
   }
 
   function renderJumpLog() {
