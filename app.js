@@ -1,6 +1,6 @@
 /*
  * Main application UI logic. Handles rendering of the four required screens
- * (Athletes List, Athlete Detail, New Jump, Jump Detail) and wire up
+ * (Athletes List, Athlete Detail, Log, Jump Detail) and wire up
  * interactions with the Storage module. Each screen is re‑rendered on navigation
  * to keep the code simple and upgrade‑friendly.
  */
@@ -17,12 +17,12 @@
      * units and step type used when creating a new jump. These settings do not
      * modify existing stored data and are stored under a separate key from the
      * core data model.
-     * @returns {{stepsType: string, gripUnit: string, takeoffUnit: string, barUnit: string, standardsUnit: string, poleUnit: string}}
+     * @returns {{stepsMode: string, gripUnit: string, takeoffUnit: string, barUnit: string, standardsUnit: string, poleUnit: string}}
      */
     function getSettings() {
         const defaultSettings = {
-            // Which leg/foot counting style to default to when logging steps
-            stepsType: 'total',
+            // Steps counting mode: lefts/rights or total steps
+            stepsMode: 'leftsRights',
             // Default units for grip, takeoff and bar height measurements
             gripUnit: 'imperial',
             takeoffUnit: 'imperial',
@@ -38,7 +38,17 @@
             coachMarkType: 'distance',
             // Default unit for coach mark distance (imperial/metric)
             coachMarkUnit: 'imperial',
-            // Whether the takeoff step check is enabled
+            // Optional logging fields
+            enableSteps: true,
+            enableApproachDistance: true,
+            enableTakeoffDistance: true,
+            enablePoleSelection: true,
+            enableGripHeight: true,
+            enableStandards: true,
+            enableLanding: false,
+            enablePoleBend: false,
+            enableNotes: true,
+            // Whether the takeoff step hit check is enabled
             enableTakeoffStepCheck: false
         };
         const raw = localStorage.getItem(SETTINGS_KEY);
@@ -47,7 +57,11 @@
         }
         try {
             const parsed = JSON.parse(raw);
-            return Object.assign({}, defaultSettings, parsed);
+            const merged = Object.assign({}, defaultSettings, parsed);
+            if (!merged.stepsMode && parsed.stepsType) {
+                merged.stepsMode = parsed.stepsType === 'total' ? 'steps' : 'leftsRights';
+            }
+            return merged;
         } catch (e) {
             console.error('Failed to parse settings', e);
             return defaultSettings;
@@ -81,13 +95,7 @@
         modal.innerHTML = `
             <h2>Settings</h2>
             <div class="settings-section">
-                <label>Default Steps Type
-                    <select id="setStepsType">
-                        <option value="lefts" ${current.stepsType === 'lefts' ? 'selected' : ''}>Lefts</option>
-                        <option value="rights" ${current.stepsType === 'rights' ? 'selected' : ''}>Rights</option>
-                        <option value="total" ${current.stepsType === 'total' ? 'selected' : ''}>Total</option>
-                    </select>
-                </label>
+                <h3>Units</h3>
                 <label>Default Grip Units
                     <select id="setGripUnit">
                         <option value="imperial" ${current.gripUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
@@ -123,6 +131,42 @@
                         <option value="imperial" ${current.approachUnit === 'imperial' ? 'selected' : ''}>Imperial (ft/in)</option>
                         <option value="metric" ${current.approachUnit === 'metric' ? 'selected' : ''}>Metric (m)</option>
                     </select>
+                </label>
+            </div>
+            <div class="settings-section">
+                <h3>Logging Options</h3>
+                <label>Steps Counting Mode
+                    <select id="setStepsMode">
+                        <option value="leftsRights" ${current.stepsMode === 'leftsRights' ? 'selected' : ''}>Lefts/Rights</option>
+                        <option value="steps" ${current.stepsMode === 'steps' ? 'selected' : ''}>Steps</option>
+                    </select>
+                </label>
+                <label>Show Steps
+                    <input type="checkbox" id="setEnableSteps" ${current.enableSteps ? 'checked' : ''}>
+                </label>
+                <label>Show Approach Distance
+                    <input type="checkbox" id="setEnableApproachDistance" ${current.enableApproachDistance ? 'checked' : ''}>
+                </label>
+                <label>Show Takeoff Distance
+                    <input type="checkbox" id="setEnableTakeoffDistance" ${current.enableTakeoffDistance ? 'checked' : ''}>
+                </label>
+                <label>Show Pole Selection
+                    <input type="checkbox" id="setEnablePoleSelection" ${current.enablePoleSelection ? 'checked' : ''}>
+                </label>
+                <label>Show Grip Height
+                    <input type="checkbox" id="setEnableGripHeight" ${current.enableGripHeight ? 'checked' : ''}>
+                </label>
+                <label>Show Standards
+                    <input type="checkbox" id="setEnableStandards" ${current.enableStandards ? 'checked' : ''}>
+                </label>
+                <label>Show Landing
+                    <input type="checkbox" id="setEnableLanding" ${current.enableLanding ? 'checked' : ''}>
+                </label>
+                <label>Show Pole Bend
+                    <input type="checkbox" id="setEnablePoleBend" ${current.enablePoleBend ? 'checked' : ''}>
+                </label>
+                <label>Show Notes
+                    <input type="checkbox" id="setEnableNotes" ${current.enableNotes ? 'checked' : ''}>
                 </label>
                 <label>Use Coach's Mark
                     <input type="checkbox" id="setEnableCoachMark" ${current.enableCoachMark ? 'checked' : ''}>
@@ -177,13 +221,22 @@
         // Save and cancel handlers
         modal.querySelector('.save-settings-btn').addEventListener('click', () => {
             const updated = {
-                stepsType: modal.querySelector('#setStepsType').value,
+                stepsMode: modal.querySelector('#setStepsMode').value,
                 gripUnit: modal.querySelector('#setGripUnit').value,
                 takeoffUnit: modal.querySelector('#setTakeoffUnit').value,
                 barUnit: modal.querySelector('#setBarUnit').value,
                 standardsUnit: modal.querySelector('#setStandardsUnit').value,
                 poleUnit: modal.querySelector('#setPoleUnit').value,
                 approachUnit: modal.querySelector('#setApproachUnit').value,
+                enableSteps: modal.querySelector('#setEnableSteps').checked,
+                enableApproachDistance: modal.querySelector('#setEnableApproachDistance').checked,
+                enableTakeoffDistance: modal.querySelector('#setEnableTakeoffDistance').checked,
+                enablePoleSelection: modal.querySelector('#setEnablePoleSelection').checked,
+                enableGripHeight: modal.querySelector('#setEnableGripHeight').checked,
+                enableStandards: modal.querySelector('#setEnableStandards').checked,
+                enableLanding: modal.querySelector('#setEnableLanding').checked,
+                enablePoleBend: modal.querySelector('#setEnablePoleBend').checked,
+                enableNotes: modal.querySelector('#setEnableNotes').checked,
                 enableCoachMark: modal.querySelector('#setEnableCoachMark').checked,
                 coachMarkType: modal.querySelector('#setCoachMarkType').value,
                 coachMarkUnit: modal.querySelector('#setCoachMarkUnit') ? modal.querySelector('#setCoachMarkUnit').value : 'imperial',
@@ -297,10 +350,10 @@
         });
         lines.push(''); // empty line between sections
         // Jumps
-        lines.push('jump_id,athlete_id,created_at,steps_count,steps_type,pole_brand,pole_weight,pole_length,grip_inches,grip_unit,takeoff_inches,takeoff_unit,bar_height_inches,bar_height_unit,standards_inches,standards_unit,approach_inches,approach_unit,coach_mark_type,coach_mark_inches,coach_mark_unit,coach_mark_step,hit_coach_mark,hit_takeoff_step,result,notes');
+        lines.push('jump_id,athlete_id,created_at,session_type,attempt,bar_up,steps_count,steps_type,pole_brand,pole_weight,pole_length,grip_inches,grip_unit,takeoff_inches,takeoff_unit,bar_height_inches,bar_height_unit,standards_inches,standards_unit,approach_inches,approach_unit,coach_mark_type,coach_mark_inches,coach_mark_unit,coach_mark_step,hit_coach_mark,hit_takeoff_step,result,landing,pole_bend,notes');
         data.jumps.forEach(j => {
             const notesEscaped = (j.notes || '').replace(/"/g, '""');
-            lines.push(`${j.id},${j.athleteId},${j.createdAt},${j.stepsCount ?? ''},${j.stepsType ?? ''},${j.poleBrand ?? ''},${j.poleWeight ?? ''},${j.poleLength ?? ''},${j.gripInches ?? ''},${j.gripUnit ?? ''},${j.takeoffInches ?? ''},${j.takeoffUnit ?? ''},${j.barHeightInches ?? ''},${j.barHeightUnit ?? ''},${j.standardsInches ?? ''},${j.standardsUnit ?? ''},${j.approachInches ?? ''},${j.approachUnit ?? ''},${j.coachMarkType ?? ''},${j.coachMarkInches ?? ''},${j.coachMarkUnit ?? ''},${j.coachMarkStep ?? ''},${j.hitCoachMark ?? ''},${j.hitTakeoffStep ?? ''},${j.result ?? ''},"${notesEscaped}"`);
+            lines.push(`${j.id},${j.athleteId},${j.createdAt},${j.sessionType ?? ''},${j.attempt ?? ''},${j.barUp ?? ''},${j.stepsCount ?? ''},${j.stepsType ?? ''},${j.poleBrand ?? ''},${j.poleWeight ?? ''},${j.poleLength ?? ''},${j.gripInches ?? ''},${j.gripUnit ?? ''},${j.takeoffInches ?? ''},${j.takeoffUnit ?? ''},${j.barHeightInches ?? ''},${j.barHeightUnit ?? ''},${j.standardsInches ?? ''},${j.standardsUnit ?? ''},${j.approachInches ?? ''},${j.approachUnit ?? ''},${j.coachMarkType ?? ''},${j.coachMarkInches ?? ''},${j.coachMarkUnit ?? ''},${j.coachMarkStep ?? ''},${j.hitCoachMark ?? ''},${j.hitTakeoffStep ?? ''},${j.result ?? ''},${j.landing ?? ''},${j.poleBend ?? ''},"${notesEscaped}"`);
         });
         const csvStr = lines.join('\n');
         const blob = new Blob([csvStr], { type: 'text/csv' });
@@ -329,6 +382,9 @@
             jump_id: j.id,
             athlete_id: j.athleteId,
             created_at: j.createdAt ?? j.date ?? '',
+            session_type: j.sessionType ?? '',
+            attempt: j.attempt ?? '',
+            bar_up: j.barUp ?? '',
             steps_count: j.stepsCount ?? '',
             steps_type: j.stepsType ?? '',
             pole_brand: j.poleBrand ?? '',
@@ -351,6 +407,8 @@
             hit_coach_mark: j.hitCoachMark ?? '',
             hit_takeoff_step: j.hitTakeoffStep ?? '',
             result: j.result ?? '',
+            landing: j.landing ?? '',
+            pole_bend: j.poleBend ?? '',
             notes: j.notes ?? ''
         }));
         const wsJumps = XLSX.utils.json_to_sheet(jumpRows);
@@ -592,13 +650,23 @@
         const header = createScreenTitle('Athletes');
         container.appendChild(header);
 
+        const topActions = document.createElement('div');
+        topActions.className = 'button-row';
+        const logBtn = document.createElement('button');
+        logBtn.className = 'button-primary';
+        logBtn.textContent = 'Log';
+        logBtn.addEventListener('click', () => {
+            renderLogScreen();
+        });
         const polesBtn = document.createElement('button');
         polesBtn.className = 'button-primary';
         polesBtn.textContent = 'Pole Bag';
         polesBtn.addEventListener('click', () => {
             renderPolesScreen();
         });
-        container.appendChild(polesBtn);
+        topActions.appendChild(logBtn);
+        topActions.appendChild(polesBtn);
+        container.appendChild(topActions);
 
         const list = document.createElement('ul');
         list.className = 'list';
@@ -693,12 +761,12 @@
             info.textContent = `${athlete.gender}, ${athlete.weightLbs} lbs`;
             container.appendChild(info);
 
-            // New Jump button
+            // Log Jump button
             const newJumpBtn = document.createElement('button');
             newJumpBtn.className = 'button-primary';
-            newJumpBtn.textContent = 'New Jump';
+            newJumpBtn.textContent = 'Log Jump';
             newJumpBtn.addEventListener('click', () => {
-                renderNewJumpScreen(athlete);
+                renderLogScreen(athlete.id);
             });
             container.appendChild(newJumpBtn);
 
@@ -749,28 +817,93 @@
     }
 
     /**
-     * Render the New Jump screen for a specific athlete. Prefills values from
-     * the athlete's most recent jump if available.
-     * @param {object} athlete
+     * Render the Log screen for quick jump entry.
+     * @param {string} selectedAthleteId
      */
-    function renderNewJumpScreen(athlete) {
+    function renderLogScreen(selectedAthleteId) {
         navigate(container => {
-            // Back button
             const backBtn = document.createElement('button');
-            backBtn.textContent = '← Cancel';
+            backBtn.textContent = '← Back';
             backBtn.className = 'button-primary';
             backBtn.style.marginBottom = '8px';
             backBtn.addEventListener('click', () => {
-                const selectedId = document.getElementById('athleteSelect')?.value || athlete.id;
-                renderAthleteDetailScreen(selectedId);
+                navigate(renderAthletesList);
             });
             container.appendChild(backBtn);
 
-            const header = createScreenTitle(`New Jump – ${athlete.name}`);
+            const header = createScreenTitle('Log');
             container.appendChild(header);
 
-            // Athlete dropdown (alphabetized). Allows quick switching without leaving the form.
             const athletes = Storage.getAthletes();
+            if (athletes.length === 0) {
+                const empty = document.createElement('p');
+                empty.textContent = 'Add an athlete to start logging jumps.';
+                container.appendChild(empty);
+                const goAthletesBtn = document.createElement('button');
+                goAthletesBtn.className = 'button-primary';
+                goAthletesBtn.textContent = 'Go to Athletes';
+                goAthletesBtn.addEventListener('click', () => {
+                    navigate(renderAthletesList);
+                });
+                container.appendChild(goAthletesBtn);
+
+                const placeholder = document.createElement('div');
+                placeholder.className = 'field-group';
+                placeholder.innerHTML = `
+                    <label>Athlete
+                        <select disabled>
+                            <option>None</option>
+                        </select>
+                    </label>
+                    <div class="field-group">
+                        <label>Session Type</label>
+                        <div class="option-buttons">
+                            <button type="button" class="option-button" disabled>Practice</button>
+                            <button type="button" class="option-button" disabled>Competition</button>
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label>Bar Height</label>
+                        <div class="field-row">
+                            <input type="number" class="field-number" disabled>
+                            <input type="number" class="field-number" disabled>
+                            <span class="unit-pill">ft/in</span>
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label>Result</label>
+                        <div class="option-buttons">
+                            <button type="button" class="option-button" disabled>Make</button>
+                            <button type="button" class="option-button" disabled>Miss</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(placeholder);
+                return;
+            }
+
+            const activeAthleteId = selectedAthleteId || athletes[0].id;
+            const activeAthlete = Storage.getAthlete(activeAthleteId);
+            const settings = getSettings();
+
+            const topActions = document.createElement('div');
+            topActions.className = 'button-row';
+            const reviewBtn = document.createElement('button');
+            reviewBtn.className = 'button-secondary';
+            reviewBtn.textContent = 'See Jump Log';
+            reviewBtn.addEventListener('click', () => {
+                renderJumpLogReviewScreen(activeAthleteId);
+            });
+            const athleteBtn = document.createElement('button');
+            athleteBtn.className = 'button-secondary';
+            athleteBtn.textContent = 'View Athlete';
+            athleteBtn.addEventListener('click', () => {
+                renderAthleteDetailScreen(activeAthleteId);
+            });
+            topActions.appendChild(reviewBtn);
+            topActions.appendChild(athleteBtn);
+            container.appendChild(topActions);
+
             const athleteSelectGroup = document.createElement('div');
             athleteSelectGroup.className = 'field-group';
             athleteSelectGroup.innerHTML = `
@@ -779,7 +912,7 @@
                         ${athletes
                             .slice()
                             .sort((a, b) => a.name.localeCompare(b.name))
-                            .map(a => `<option value="${escapeHtml(a.id)}" ${a.id === athlete.id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`)
+                            .map(a => `<option value="${escapeHtml(a.id)}" ${a.id === activeAthleteId ? 'selected' : ''}>${escapeHtml(a.name)}</option>`)
                             .join('')}
                     </select>
                 </label>
@@ -788,123 +921,136 @@
 
             const athleteSelectEl = athleteSelectGroup.querySelector('#athleteSelect');
             athleteSelectEl.addEventListener('change', () => {
-                const selected = Storage.getAthlete(athleteSelectEl.value);
-                if (selected) {
-                    renderNewJumpScreen(selected);
-                }
+                renderLogScreen(athleteSelectEl.value);
             });
 
-            // determine last jump to prefill
-            const previousJumps = Storage.getJumpsForAthlete(athlete.id);
+            const recentSection = document.createElement('div');
+            const recentTitle = document.createElement('h3');
+            recentTitle.className = 'section-title';
+            recentTitle.textContent = 'Recent Jumps';
+            recentSection.appendChild(recentTitle);
+            const recentJumps = Storage.getJumpsForAthlete(activeAthleteId).slice(0, 3);
+            if (recentJumps.length === 0) {
+                const emptyRecent = document.createElement('p');
+                emptyRecent.textContent = 'No jumps logged yet.';
+                recentSection.appendChild(emptyRecent);
+            } else {
+                const list = document.createElement('ul');
+                list.className = 'list';
+                recentJumps.forEach(jump => {
+                    const li = document.createElement('li');
+                    li.className = 'list-item';
+                    const barLabel = jump.barHeightInches != null
+                        ? (jump.barHeightUnit === 'metric'
+                            ? `${(jump.barHeightInches / 39.3701).toFixed(2)} m`
+                            : `${Math.floor(jump.barHeightInches / 12)}' ${(jump.barHeightInches % 12).toFixed(1)}"`)
+                        : 'No bar';
+                    const resultLabel = jump.result ? jump.result.toUpperCase() : '';
+                    const dateLabel = resolveJumpDate(jump) ? formatDate(resolveJumpDate(jump)) : '';
+                    li.innerHTML = `<span><strong>${barLabel}</strong> ${resultLabel}</span><span>${escapeHtml(dateLabel)}</span>`;
+                    li.addEventListener('click', () => {
+                        renderJumpDetailScreen(jump.id);
+                    });
+                    list.appendChild(li);
+                });
+                recentSection.appendChild(list);
+            }
+            container.appendChild(recentSection);
+
+            const previousJumps = Storage.getJumpsForAthlete(activeAthleteId);
             const lastJump = previousJumps.length > 0 ? previousJumps[0] : null;
-            // Load settings to determine default units when no last jump exists
-            const settings = getSettings();
-            // Prefill values for steps
-            const stepsCountVal = lastJump?.stepsCount ?? lastJump?.steps ?? '';
-            const stepsTypeVal = lastJump?.stepsType ?? settings.stepsType;
-            // Prefill pole values
-            const poleBrandVal = lastJump?.poleBrand ?? '';
-            const poleWeightVal = lastJump?.poleWeight ?? '';
-            const poleLengthVal = lastJump?.poleLength ?? '';
-            // Get saved poles
-            const savedPoles = Storage.getPoles();
-            let poleOptionsHtml = '<option value="custom">-- New Pole --</option>';
-            savedPoles.forEach(pole => {
-                const key = `${pole.brand}|${pole.weight}|${pole.length}`;
-                const label = `${pole.brand} – ${pole.weight} – ${pole.length}`;
-                const selected = (pole.brand === poleBrandVal && pole.weight === poleWeightVal && pole.length === poleLengthVal) ? 'selected' : '';
-                poleOptionsHtml += `<option value="${escapeHtml(key)}" ${selected}>${escapeHtml(label)}</option>`;
-            });
-            // Measurement helpers
+            const lastCompetitionJump = previousJumps.find(jump => jump.sessionType === 'competition') || null;
+
             function inchesToFeetInches(totalInches) {
                 const feet = Math.floor(totalInches / 12);
-                const inches = (totalInches - feet * 12);
+                const inches = totalInches - feet * 12;
                 return { feet, inches };
             }
-            function inchesToMeters(inches) {
-                return inches / 39.3701;
-            }
-            function metersToInches(meters) {
-                return meters * 39.3701;
-            }
-            // Prefill grip values
-            const gripUnitVal = lastJump?.gripUnit ?? settings.gripUnit;
-            const gripInchesVal = lastJump?.gripInches ? parseFloat(lastJump.gripInches) : null;
-            let gripFeetVal = '';
-            let gripInchesRemVal = '';
-            let gripMetersVal = '';
-            if (gripInchesVal !== null) {
-                if (gripUnitVal === 'imperial') {
-                    const conv = inchesToFeetInches(gripInchesVal);
-                    gripFeetVal = conv.feet;
-                    gripInchesRemVal = parseFloat(conv.inches.toFixed(1));
-                    gripMetersVal = (gripInchesVal / 39.3701).toFixed(2);
-                } else {
-                    gripMetersVal = (gripInchesVal / 39.3701).toFixed(2);
-                    const conv = inchesToFeetInches(gripInchesVal);
-                    gripFeetVal = conv.feet;
-                    gripInchesRemVal = parseFloat(conv.inches.toFixed(1));
+
+            function buildOptions(max, selectedValue, start = 1, includeBlank = true) {
+                const options = [];
+                if (includeBlank) {
+                    options.push(`<option value="" ${selectedValue == null ? 'selected' : ''}></option>`);
                 }
-            }
-            // Prefill takeoff values
-            const takeoffUnitVal = lastJump?.takeoffUnit ?? settings.takeoffUnit;
-            const takeoffInchesVal = lastJump?.takeoffInches ? parseFloat(lastJump.takeoffInches) : null;
-            let takeoffFeetVal = '';
-            let takeoffInchesRemVal = '';
-            let takeoffMetersVal = '';
-            if (takeoffInchesVal !== null) {
-                if (takeoffUnitVal === 'imperial') {
-                    const conv = inchesToFeetInches(takeoffInchesVal);
-                    takeoffFeetVal = conv.feet;
-                    takeoffInchesRemVal = parseFloat(conv.inches.toFixed(1));
-                    takeoffMetersVal = (takeoffInchesVal / 39.3701).toFixed(2);
-                } else {
-                    takeoffMetersVal = (takeoffInchesVal / 39.3701).toFixed(2);
-                    const conv = inchesToFeetInches(takeoffInchesVal);
-                    takeoffFeetVal = conv.feet;
-                    takeoffInchesRemVal = parseFloat(conv.inches.toFixed(1));
+                for (let i = start; i <= max; i++) {
+                    options.push(`<option value="${i}" ${Number(selectedValue) === i ? 'selected' : ''}>${i}</option>`);
                 }
+                return options.join('');
             }
-            // Prefill bar height values
+
+            const stepsCountVal = lastJump?.stepsCount ?? '';
+            const stepsTypeVal = lastJump?.stepsType === 'total'
+                ? 'steps'
+                : (lastJump?.stepsType ?? (settings.stepsMode === 'steps' ? 'steps' : 'lefts'));
             const barUnitVal = lastJump?.barHeightUnit ?? settings.barUnit;
-            const barInchesVal = lastJump?.barHeightInches ? parseFloat(lastJump.barHeightInches) : null;
+            const barInchesVal = lastJump?.barHeightInches != null ? parseFloat(lastJump.barHeightInches) : null;
+            const approachUnitVal = lastJump?.approachUnit ?? settings.approachUnit;
+            const approachInchesVal = lastJump?.approachInches != null ? parseFloat(lastJump.approachInches) : null;
+            const takeoffUnitVal = lastJump?.takeoffUnit ?? settings.takeoffUnit;
+            const takeoffInchesVal = lastJump?.takeoffInches != null ? parseFloat(lastJump.takeoffInches) : null;
+            const gripUnitVal = lastJump?.gripUnit ?? settings.gripUnit;
+            const gripInchesVal = lastJump?.gripInches != null ? parseFloat(lastJump.gripInches) : null;
+            const standardsUnitVal = lastJump?.standardsUnit ?? settings.standardsUnit;
+            const standardsInchesVal = lastJump?.standardsInches != null ? parseFloat(lastJump.standardsInches) : null;
+            const lastLanding = lastJump?.landing ?? '';
+            const lastPoleBend = lastJump?.poleBend ?? '';
+            const notesVal = lastJump?.notes ?? '';
+            const sessionTypeDefault = lastJump?.sessionType ?? 'practice';
+            const barUpDefault = lastJump?.barUp === false ? 'no' : 'yes';
+            const resultDefault = lastJump?.result ?? 'make';
+
             let barFeetVal = '';
             let barInchesRemVal = '';
             let barMetersVal = '';
-            if (barInchesVal !== null) {
+            if (barInchesVal != null) {
                 if (barUnitVal === 'imperial') {
                     const conv = inchesToFeetInches(barInchesVal);
                     barFeetVal = conv.feet;
-                    barInchesRemVal = parseFloat(conv.inches.toFixed(1));
-                    barMetersVal = (barInchesVal / 39.3701).toFixed(2);
+                    barInchesRemVal = parseFloat(conv.inches.toFixed(2));
                 } else {
                     barMetersVal = (barInchesVal / 39.3701).toFixed(2);
-                    const conv = inchesToFeetInches(barInchesVal);
-                    barFeetVal = conv.feet;
-                    barInchesRemVal = parseFloat(conv.inches.toFixed(1));
                 }
             }
-            // Prefill approach mark
-            const approachUnitVal = lastJump?.approachUnit ?? settings.approachUnit;
-            const approachInchesVal = lastJump?.approachInches != null ? parseFloat(lastJump.approachInches) : null;
+
             let approachFeetVal = '';
             let approachInchesRemVal = '';
             let approachMetersVal = '';
-            if (approachInchesVal !== null) {
+            if (approachInchesVal != null) {
                 if (approachUnitVal === 'imperial') {
                     const conv = inchesToFeetInches(approachInchesVal);
                     approachFeetVal = conv.feet;
-                    approachInchesRemVal = Math.round(conv.inches); // whole inches
-                    approachMetersVal = (approachInchesVal / 39.3701).toFixed(2);
+                    approachInchesRemVal = Math.round(conv.inches);
                 } else {
                     approachMetersVal = (approachInchesVal / 39.3701).toFixed(2);
-                    const conv = inchesToFeetInches(approachInchesVal);
-                    approachFeetVal = conv.feet;
-                    approachInchesRemVal = Math.round(conv.inches);
                 }
             }
-            // Prefill coach's mark
-            const enableCoachMark = settings.enableCoachMark;
+
+            let takeoffFeetVal = '';
+            let takeoffInchesRemVal = '';
+            let takeoffMetersVal = '';
+            if (takeoffInchesVal != null) {
+                if (takeoffUnitVal === 'imperial') {
+                    const conv = inchesToFeetInches(takeoffInchesVal);
+                    takeoffFeetVal = conv.feet;
+                    takeoffInchesRemVal = Math.round(conv.inches);
+                } else {
+                    takeoffMetersVal = (takeoffInchesVal / 39.3701).toFixed(2);
+                }
+            }
+
+            let gripFeetVal = '';
+            let gripInchesRemVal = '';
+            let gripMetersVal = '';
+            if (gripInchesVal != null) {
+                if (gripUnitVal === 'imperial') {
+                    const conv = inchesToFeetInches(gripInchesVal);
+                    gripFeetVal = conv.feet;
+                    gripInchesRemVal = Math.round(conv.inches);
+                } else {
+                    gripMetersVal = (gripInchesVal / 39.3701).toFixed(2);
+                }
+            }
+
             const coachMarkTypeVal = settings.coachMarkType;
             const coachMarkUnitVal = settings.coachMarkUnit;
             const lastCoachDistance = lastJump?.coachMarkInches != null ? parseFloat(lastJump.coachMarkInches) : null;
@@ -913,281 +1059,294 @@
             let coachInchesRemVal = '';
             let coachMetersVal = '';
             let coachStepVal = '';
-            let hitCoachMarkVal = lastJump?.hitCoachMark ?? false;
-            if (enableCoachMark) {
+            if (settings.enableCoachMark) {
                 if (coachMarkTypeVal === 'distance') {
                     if (lastCoachDistance != null) {
                         if (coachMarkUnitVal === 'imperial') {
                             const conv = inchesToFeetInches(lastCoachDistance);
                             coachFeetVal = conv.feet;
                             coachInchesRemVal = Math.round(conv.inches);
-                            coachMetersVal = (lastCoachDistance / 39.3701).toFixed(2);
                         } else {
                             coachMetersVal = (lastCoachDistance / 39.3701).toFixed(2);
-                            const conv = inchesToFeetInches(lastCoachDistance);
-                            coachFeetVal = conv.feet;
-                            coachInchesRemVal = Math.round(conv.inches);
                         }
                     }
-                } else {
-                    if (lastCoachStep != null) {
-                        coachStepVal = lastCoachStep;
-                    }
+                } else if (lastCoachStep != null) {
+                    coachStepVal = lastCoachStep;
                 }
             }
-            // Prefill takeoff step check
-            const enableTakeoffStepCheck = settings.enableTakeoffStepCheck;
-            let hitTakeoffStepVal = lastJump?.hitTakeoffStep ?? false;
 
-            // Prefill standards
-            const standardsUnitVal = lastJump?.standardsUnit ?? settings.standardsUnit;
-            const standardsInchesVal = lastJump?.standardsInches ? parseFloat(lastJump.standardsInches) : null;
-            let standardsDisplayVal = '';
-            if (standardsInchesVal !== null) {
-                if (standardsUnitVal === 'cm') {
-                    standardsDisplayVal = (standardsInchesVal / 0.393701).toFixed(1);
-                } else {
-                    standardsDisplayVal = parseFloat(standardsInchesVal.toFixed(1));
-                }
-            }
-            const notesVal = lastJump?.notes ?? '';
+            const savedPoles = Storage.getPoles();
+            const poleBrandVal = lastJump?.poleBrand ?? '';
+            const poleWeightVal = lastJump?.poleWeight ?? '';
+            const poleLengthVal = lastJump?.poleLength ?? '';
+            let poleOptionsHtml = '<option value="add-new">Add new pole</option>';
+            savedPoles.forEach(pole => {
+                const key = `${pole.brand}|${pole.weight}|${pole.length}`;
+                const label = `${pole.brand} – ${pole.weight} – ${pole.length}`;
+                const selected = (pole.brand === poleBrandVal && pole.weight === poleWeightVal && pole.length === poleLengthVal) ? 'selected' : '';
+                poleOptionsHtml += `<option value="${escapeHtml(key)}" ${selected}>${escapeHtml(label)}</option>`;
+            });
+
+            const defaultAttempt = (() => {
+                if (!lastCompetitionJump) return 1;
+                if (lastCompetitionJump.result === 'make') return 1;
+                const lastAttempt = Number(lastCompetitionJump.attempt) || 1;
+                return Math.min(lastAttempt + 1, 3);
+            })();
 
             const form = document.createElement('form');
-            const safeStepsCountVal = escapeHtml(stepsCountVal);
-            const safePoleBrandVal = escapeHtml(poleBrandVal);
-            const safePoleWeightVal = escapeHtml(poleWeightVal);
-            const safePoleLengthVal = escapeHtml(poleLengthVal);
-            const safeGripFeetVal = escapeHtml(gripFeetVal);
-            const safeGripInchesRemVal = escapeHtml(gripInchesRemVal);
-            const safeGripMetersVal = escapeHtml(gripMetersVal);
-            const safeTakeoffFeetVal = escapeHtml(takeoffFeetVal);
-            const safeTakeoffInchesRemVal = escapeHtml(takeoffInchesRemVal);
-            const safeTakeoffMetersVal = escapeHtml(takeoffMetersVal);
-            const safeBarFeetVal = escapeHtml(barFeetVal);
-            const safeBarInchesRemVal = escapeHtml(barInchesRemVal);
-            const safeBarMetersVal = escapeHtml(barMetersVal);
-            const safeApproachFeetVal = escapeHtml(approachFeetVal);
-            const safeApproachInchesRemVal = escapeHtml(approachInchesRemVal);
-            const safeApproachMetersVal = escapeHtml(approachMetersVal);
-            const safeCoachFeetVal = escapeHtml(coachFeetVal);
-            const safeCoachInchesRemVal = escapeHtml(coachInchesRemVal);
-            const safeCoachMetersVal = escapeHtml(coachMetersVal);
-            const safeCoachStepVal = escapeHtml(coachStepVal);
-            const safeNotesVal = escapeHtml(notesVal);
-            // Build form HTML with prefilled values. Units are derived from last jump or global settings.
             form.innerHTML = `
                 <div class="field-group">
-                    <label>Session Type
-                        <div class="field-row" id="sessionTypeRow">
-                            <label style="margin-right:12px;"><input type="radio" name="sessionType" value="practice" checked> Practice</label>
-                            <label><input type="radio" name="sessionType" value="competition"> Competition</label>
-                        </div>
-                    </label>
+                    <label>Session Type</label>
+                    <div class="option-buttons" id="sessionTypeRow">
+                        <button type="button" data-value="practice" class="option-button ${sessionTypeDefault === 'practice' ? 'selected' : ''}">Practice</button>
+                        <button type="button" data-value="competition" class="option-button ${sessionTypeDefault === 'competition' ? 'selected' : ''}">Competition</button>
+                    </div>
+                </div>
+                <div class="field-group" id="attemptGroup" style="display:none;">
+                    <label>Attempt</label>
+                    <div class="option-buttons" id="attemptButtons">
+                        <button type="button" data-value="1" class="option-button ${defaultAttempt === 1 ? 'selected' : ''}">1</button>
+                        <button type="button" data-value="2" class="option-button ${defaultAttempt === 2 ? 'selected' : ''}">2</button>
+                        <button type="button" data-value="3" class="option-button ${defaultAttempt === 3 ? 'selected' : ''}">3</button>
+                    </div>
                 </div>
                 <div class="field-group" id="barUpGroup">
-                    <label>Bar up?
-                        <div class="field-row" id="barUpRow">
-                            <label style="margin-right:12px;"><input type="radio" name="barUp" value="yes" checked> Yes</label>
-                            <label><input type="radio" name="barUp" value="no"> No</label>
-                        </div>
-                    </label>
+                    <label>Bar up?</label>
+                    <div class="option-buttons" id="barUpRow">
+                        <button type="button" data-value="yes" class="option-button ${barUpDefault === 'yes' ? 'selected' : ''}">Yes</button>
+                        <button type="button" data-value="no" class="option-button ${barUpDefault === 'no' ? 'selected' : ''}">No</button>
+                    </div>
                 </div>
                 <div class="field-group" id="barHeightGroup">
-                    <label>Bar Height
+                    <label>Bar Height</label>
+                    <div class="field-row">
+                        ${barUnitVal === 'imperial' ? `
+                            <input type="number" id="barFeet" class="field-number" value="${escapeHtml(barFeetVal)}" min="0" step="1" inputmode="numeric">
+                            <input type="number" id="barInchesInput" class="field-number" value="${escapeHtml(barInchesRemVal)}" min="0" step="0.01" inputmode="decimal">
+                            <span class="unit-pill">ft/in</span>
+                        ` : `
+                            <input type="number" id="barMeters" class="field-number" value="${escapeHtml(barMetersVal)}" min="0" step="0.01" inputmode="decimal">
+                            <span class="unit-pill">m</span>
+                        `}
+                    </div>
+                </div>
+                ${settings.enableSteps ? `
+                    <div class="field-group">
+                        <label>Steps</label>
                         <div class="field-row">
-                            ${barUnitVal === 'imperial' ? `
-                                <input type="number" id="barFeet" class="field-number" value="${safeBarFeetVal}" min="0" step="1">
-                                <input type="number" id="barInchesInput" class="field-number" value="${safeBarInchesRemVal}" min="0" step="0.1">
-                                <span class="unit-pill">ft/in</span>
+                            <select id="stepsCount">
+                                ${settings.stepsMode === 'steps'
+                                    ? buildOptions(20, stepsCountVal, 1, true)
+                                    : buildOptions(10, stepsCountVal, 1, true)}
+                            </select>
+                            ${settings.stepsMode === 'leftsRights' ? `
+                                <select id="stepsType">
+                                    <option value="lefts" ${stepsTypeVal === 'lefts' ? 'selected' : ''}>Lefts</option>
+                                    <option value="rights" ${stepsTypeVal === 'rights' ? 'selected' : ''}>Rights</option>
+                                </select>
                             ` : `
-                                <input type="number" id="barMeters" class="field-number" value="${safeBarMetersVal}" min="0" step="0.01">
-                                <span class="unit-pill">m</span>
+                                <input type="hidden" id="stepsType" value="steps">
                             `}
                         </div>
-                    </label>
-                </div>
-                <div class="field-group">
-                    <label>Steps Count
-                        <input type="number" id="stepsCount" value="${safeStepsCountVal}" inputmode="numeric" pattern="[0-9]*" min="0">
-                    </label>
-                    <label>Steps Type
-                        <select id="stepsType">
-                            <option value="lefts" ${stepsTypeVal === 'lefts' ? 'selected' : ''}>Lefts</option>
-                            <option value="rights" ${stepsTypeVal === 'rights' ? 'selected' : ''}>Rights</option>
-                            <option value="total" ${stepsTypeVal === 'total' ? 'selected' : ''}>Total</option>
-                        </select>
-                    </label>
-                </div>
-                <div class="field-group">
-                    <label>Saved Poles
-                        <select id="poleSelect">
-                            ${poleOptionsHtml}
-                        </select>
-                    </label>
-                    <label>Brand
-                        <input type="text" id="poleBrand" value="${safePoleBrandVal}">
-                    </label>
-                    <label>Weight
-                        <input type="text" id="poleWeight" value="${safePoleWeightVal}">
-                    </label>
-                    <label>Length
-                        <input type="text" id="poleLength" value="${safePoleLengthVal}">
-                    </label>
-                </div>
-                <div class="field-group">
-                    <label>Grip
+                    </div>
+                ` : ''}
+                ${settings.enablePoleSelection ? `
+                    <div class="field-group">
+                        <label>Pole</label>
+                        ${savedPoles.length > 0 ? `
+                            <select id="poleSelect">${poleOptionsHtml}</select>
+                        ` : `
+                            <p class="helper-text">No saved poles yet.</p>
+                        `}
+                        <div id="poleFields">
+                            <label>Brand
+                                <input type="text" id="poleBrand" value="${escapeHtml(poleBrandVal)}">
+                            </label>
+                            <label>Weight Rating
+                                <input type="text" id="poleWeight" value="${escapeHtml(poleWeightVal)}">
+                            </label>
+                            <label>Length
+                                <input type="text" id="poleLength" value="${escapeHtml(poleLengthVal)}">
+                            </label>
+                        </div>
+                        <button type="button" class="button-secondary" id="managePolesBtn">Manage Poles</button>
+                    </div>
+                ` : ''}
+                ${settings.enableGripHeight ? `
+                    <div class="field-group">
+                        <label>Grip Height</label>
                         <div class="field-row">
                             ${gripUnitVal === 'imperial' ? `
-                                <input type="number" id="gripFeet" class="field-number" value="${safeGripFeetVal}" min="0" step="1">
-                                <input type="number" id="gripInchesInput" class="field-number" value="${safeGripInchesRemVal}" min="0" step="0.1">
+                                <input type="number" id="gripFeet" class="field-number" value="${escapeHtml(gripFeetVal)}" min="0" step="1" inputmode="numeric">
+                                <select id="gripInchesInput">
+                                    ${buildOptions(12, gripInchesRemVal, 1, true)}
+                                </select>
                                 <span class="unit-pill">ft/in</span>
                             ` : `
-                                <input type="number" id="gripMeters" class="field-number" value="${safeGripMetersVal}" min="0" step="0.01">
+                                <input type="number" id="gripMeters" class="field-number" value="${escapeHtml(gripMetersVal)}" min="0" step="0.01" inputmode="decimal">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
-                    </label>
-                </div>
-                <div class="field-group">
-                    <label>Takeoff
+                    </div>
+                ` : ''}
+                ${settings.enableTakeoffDistance ? `
+                    <div class="field-group">
+                        <label>Takeoff Step</label>
                         <div class="field-row">
                             ${takeoffUnitVal === 'imperial' ? `
-                                <input type="number" id="takeoffFeet" class="field-number" value="${safeTakeoffFeetVal}" min="0" step="1">
-                                <input type="number" id="takeoffInchesInput" class="field-number" value="${safeTakeoffInchesRemVal}" min="0" step="0.1">
+                                <input type="number" id="takeoffFeet" class="field-number" value="${escapeHtml(takeoffFeetVal)}" min="0" step="1" inputmode="numeric">
+                                <select id="takeoffInchesInput">
+                                    ${buildOptions(12, takeoffInchesRemVal, 1, true)}
+                                </select>
                                 <span class="unit-pill">ft/in</span>
                             ` : `
-                                <input type="number" id="takeoffMeters" class="field-number" value="${safeTakeoffMetersVal}" min="0" step="0.01">
+                                <input type="number" id="takeoffMeters" class="field-number" value="${escapeHtml(takeoffMetersVal)}" min="0" step="0.01" inputmode="decimal">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
-                    </label>
-                </div>
-                <!-- Approach mark input -->
-                <div class="field-group">
-                    <label>Approach Mark
+                    </div>
+                ` : ''}
+                ${settings.enableApproachDistance ? `
+                    <div class="field-group">
+                        <label>Approach Distance</label>
                         <div class="field-row">
                             ${approachUnitVal === 'imperial' ? `
-                                <input type="number" id="approachFeet" class="field-number" value="${safeApproachFeetVal}" min="0" step="1">
-                                <input type="number" id="approachInchesInput" class="field-number" value="${safeApproachInchesRemVal}" min="0" step="1">
+                                <input type="number" id="approachFeet" class="field-number" value="${escapeHtml(approachFeetVal)}" min="0" step="1" inputmode="numeric">
+                                <select id="approachInchesInput">
+                                    ${buildOptions(12, approachInchesRemVal, 1, true)}
+                                </select>
                                 <span class="unit-pill">ft/in</span>
                             ` : `
-                                <input type="number" id="approachMeters" class="field-number" value="${safeApproachMetersVal}" min="0" step="0.01">
+                                <input type="number" id="approachMeters" class="field-number" value="${escapeHtml(approachMetersVal)}" min="0" step="0.01" inputmode="decimal">
                                 <span class="unit-pill">m</span>
                             `}
                         </div>
-                    </label>
-                </div>
-                <!-- Coach's mark input (conditional) -->
-                <div class="field-group" id="coachMarkGroup" style="display:${enableCoachMark ? 'block' : 'none'};">
-                    <label>Coach's Mark
+                    </div>
+                ` : ''}
+                ${settings.enableCoachMark ? `
+                    <div class="field-group">
+                        <label>Coach's Mark</label>
                         <div class="field-row">
-                            ${enableCoachMark && coachMarkTypeVal === 'distance' ? `
-                                ${coachMarkUnitVal === 'imperial' ? `
-                                    <input type="number" id="coachFeet" class="field-number" value="${safeCoachFeetVal}" min="0" step="1">
-                                    <input type="number" id="coachInchesInput" class="field-number" value="${safeCoachInchesRemVal}" min="0" step="1">
+                            ${settings.coachMarkType === 'distance' ? `
+                                ${settings.coachMarkUnit === 'imperial' ? `
+                                    <input type="number" id="coachFeet" class="field-number" value="${escapeHtml(coachFeetVal)}" min="0" step="1" inputmode="numeric">
+                                    <select id="coachInchesInput">
+                                        ${buildOptions(12, coachInchesRemVal, 1, true)}
+                                    </select>
                                     <span class="unit-pill">ft/in</span>
                                 ` : `
-                                    <input type="number" id="coachMeters" class="field-number" value="${safeCoachMetersVal}" min="0" step="0.01">
+                                    <input type="number" id="coachMeters" class="field-number" value="${escapeHtml(coachMetersVal)}" min="0" step="0.01" inputmode="decimal">
                                     <span class="unit-pill">m</span>
                                 `}
                             ` : `
-                                <input type="number" id="coachStep" class="field-number" value="${safeCoachStepVal}" min="0" step="1">
+                                <input type="number" id="coachStep" class="field-number" value="${escapeHtml(coachStepVal)}" min="0" step="1" inputmode="numeric">
                                 <span class="unit-pill">steps</span>
                             `}
                         </div>
-                    </label>
-                    <label style="margin-top:4px;"><input type="checkbox" id="hitCoachMark" ${hitCoachMarkVal ? 'checked' : ''}> Hit coach's mark</label>
-                </div>
-                <!-- Takeoff step hit check (conditional) -->
-                <div class="field-group" id="takeoffStepGroup" style="display:${enableTakeoffStepCheck ? 'block' : 'none'};">
-                    <label><input type="checkbox" id="hitTakeoffStep" ${hitTakeoffStepVal ? 'checked' : ''}> Hit takeoff step</label>
-                </div>
-                <div class="field-group">
-                    <label>Standards
+                        <label class="inline-checkbox">
+                            <input type="checkbox" id="hitCoachMark" ${lastJump?.hitCoachMark ? 'checked' : ''}> Hit coach's mark
+                        </label>
+                    </div>
+                ` : ''}
+                ${settings.enableTakeoffStepCheck ? `
+                    <div class="field-group">
+                        <label class="inline-checkbox">
+                            <input type="checkbox" id="hitTakeoffStep" ${lastJump?.hitTakeoffStep ? 'checked' : ''}> Hit takeoff step
+                        </label>
+                    </div>
+                ` : ''}
+                ${settings.enableStandards ? `
+                    <div class="field-group">
+                        <label>Standards</label>
                         <div class="field-row">
                             <select id="standardsValue"></select>
                             <span class="unit-pill">${standardsUnitVal === 'cm' ? 'cm' : 'in'}</span>
                         </div>
+                    </div>
+                ` : ''}
+                ${settings.enableLanding ? `
+                    <div class="field-group">
+                        <label>Landing</label>
+                        <div class="option-buttons" id="landingButtons">
+                            <button type="button" data-value="shallow" class="option-button ${lastLanding === 'shallow' ? 'selected' : ''}">Shallow</button>
+                            <button type="button" data-value="centered" class="option-button ${lastLanding === 'centered' ? 'selected' : ''}">Centered</button>
+                            <button type="button" data-value="deep" class="option-button ${lastLanding === 'deep' ? 'selected' : ''}">Deep</button>
+                        </div>
+                    </div>
+                ` : ''}
+                ${settings.enablePoleBend ? `
+                    <div class="field-group">
+                        <label>Pole Bend</label>
+                        <div class="option-buttons" id="poleBendButtons">
+                            <button type="button" data-value="too-much" class="option-button ${lastPoleBend === 'too-much' ? 'selected' : ''}">Too much</button>
+                            <button type="button" data-value="just-right" class="option-button ${lastPoleBend === 'just-right' ? 'selected' : ''}">Just right</button>
+                            <button type="button" data-value="too-little" class="option-button ${lastPoleBend === 'too-little' ? 'selected' : ''}">Too little</button>
+                        </div>
+                    </div>
+                ` : ''}
+                ${settings.enableNotes ? `
+                    <label>Notes (optional)
+                        <textarea id="notes">${escapeHtml(notesVal)}</textarea>
                     </label>
-                </div>
-                <label>Notes (optional)
-                    <textarea id="notes">${safeNotesVal}</textarea>
-                </label>
+                ` : ''}
             `;
             container.appendChild(form);
 
-            // no dynamic unit selects; units are controlled by settings or last jump.
-            // handle pole selection
-            const poleSelectEl = form.querySelector('#poleSelect');
-            poleSelectEl.addEventListener('change', () => {
-                const val = poleSelectEl.value;
-                if (val === 'custom') {
-                    // clear fields for new entry
-                    form.querySelector('#poleBrand').value = '';
-                    form.querySelector('#poleWeight').value = '';
-                    form.querySelector('#poleLength').value = '';
-                } else {
-                    const parts = val.split('|');
-                    form.querySelector('#poleBrand').value = parts[0] || '';
-                    form.querySelector('#poleWeight').value = parts[1] || '';
-                    form.querySelector('#poleLength').value = parts[2] || '';
-                }
+            const sessionButtons = Array.from(form.querySelectorAll('#sessionTypeRow .option-button'));
+            const barUpButtons = Array.from(form.querySelectorAll('#barUpRow .option-button'));
+            const attemptButtons = Array.from(form.querySelectorAll('#attemptButtons .option-button'));
+
+            function setSelected(buttons, value) {
+                buttons.forEach(btn => {
+                    btn.classList.toggle('selected', btn.dataset.value === value);
+                });
+            }
+
+            let sessionType = sessionTypeDefault;
+            let barUpValue = barUpDefault;
+            let attemptValue = String(defaultAttempt);
+            let selectedResult = resultDefault;
+            let landingValue = lastLanding || '';
+            let poleBendValue = lastPoleBend || '';
+
+            sessionButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    sessionType = btn.dataset.value;
+                    setSelected(sessionButtons, sessionType);
+                    toggleVisibilityForSession();
+                });
+            });
+            barUpButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    barUpValue = btn.dataset.value;
+                    setSelected(barUpButtons, barUpValue);
+                    toggleVisibilityForSession();
+                });
+            });
+            attemptButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    attemptValue = btn.dataset.value;
+                    setSelected(attemptButtons, attemptValue);
+                });
             });
 
-            // Populate standards dropdown based on the selected unit (from last jump or settings).
-            function populateStandardsOptions(selectedUnit) {
-                const valueSelect = form.querySelector('#standardsValue');
-                valueSelect.innerHTML = '';
-                let options = [];
-                if (selectedUnit === 'cm') {
-                    // 45cm to 80cm inclusive, step 5cm
-                    for (let cm = 45; cm <= 80; cm += 5) {
-                        options.push({ label: `${cm} cm`, value: cm });
-                    }
-                } else {
-                    // inches: 18 in to 31.5 in inclusive increments of 1 in, final 31.5
-                    for (let inch = 18; inch <= 31; inch++) {
-                        options.push({ label: `${inch} in`, value: inch });
-                    }
-                    options.push({ label: '31.5 in', value: 31.5 });
-                }
-                options.forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt.value;
-                    o.textContent = opt.label;
-                    valueSelect.appendChild(o);
+            const landingButtons = Array.from(form.querySelectorAll('#landingButtons .option-button'));
+            landingButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    landingValue = btn.dataset.value;
+                    setSelected(landingButtons, landingValue);
                 });
-                // determine preselected value from last jump
-                let preselect = null;
-                if (standardsInchesVal != null) {
-                    if (selectedUnit === 'cm') {
-                        const cmVal = standardsInchesVal / 0.393701;
-                        preselect = Math.round(cmVal / 5) * 5;
-                        if (preselect < 45) preselect = 45;
-                        if (preselect > 80) preselect = 80;
-                    } else {
-                        const inchVal = standardsInchesVal;
-                        if (inchVal > 31) {
-                            preselect = 31.5;
-                        } else {
-                            preselect = Math.round(inchVal);
-                            if (preselect < 18) preselect = 18;
-                            if (preselect > 31) preselect = 31;
-                        }
-                    }
-                }
-                if (preselect != null) {
-                    const matchOption = Array.from(valueSelect.options).find(o => parseFloat(o.value) === parseFloat(preselect));
-                    if (matchOption) {
-                        matchOption.selected = true;
-                    }
-                }
-            }
-            // initial population of standards options
-            populateStandardsOptions(standardsUnitVal);
+            });
 
-            // result selection
-            let selectedResult = 'make'; // default
+            const poleBendButtons = Array.from(form.querySelectorAll('#poleBendButtons .option-button'));
+            poleBendButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    poleBendValue = btn.dataset.value;
+                    setSelected(poleBendButtons, poleBendValue);
+                });
+            });
+
             const resultContainer = document.createElement('div');
             resultContainer.className = 'result-buttons';
             const makeBtn = document.createElement('button');
@@ -1198,7 +1357,6 @@
             missBtn.className = 'miss-btn';
             missBtn.type = 'button';
             missBtn.textContent = 'Miss';
-            // highlight selected
             function updateResultButtons() {
                 makeBtn.classList.toggle('selected', selectedResult === 'make');
                 missBtn.classList.toggle('selected', selectedResult === 'miss');
@@ -1218,180 +1376,392 @@
             container.appendChild(resultContainer);
 
             function toggleVisibilityForSession() {
-                const selectedSession = form.querySelector('input[name="sessionType"]:checked').value;
-                const barUpValue = form.querySelector('input[name="barUp"]:checked').value;
                 const barHeightGroup = form.querySelector('#barHeightGroup');
-                const resultSection = document.getElementById('resultContainer');
-                if (selectedSession === 'practice') {
-                    // Show/hide bar inputs and result buttons based on Bar up selection
+                const attemptGroup = form.querySelector('#attemptGroup');
+                if (sessionType === 'practice') {
                     const showBar = barUpValue === 'yes';
                     barHeightGroup.style.display = showBar ? 'block' : 'none';
-                    resultSection.style.display = showBar ? 'flex' : 'none';
+                    resultContainer.style.display = showBar ? 'flex' : 'none';
+                    attemptGroup.style.display = 'none';
                 } else {
-                    // competition always shows bar + result
                     barHeightGroup.style.display = 'block';
-                    resultSection.style.display = 'flex';
+                    resultContainer.style.display = 'flex';
+                    attemptGroup.style.display = 'block';
                 }
-                // Bar Up controls only relevant in practice
-                const barUpGroup = document.getElementById('barUpGroup');
-                barUpGroup.style.display = selectedSession === 'practice' ? 'block' : 'none';
+                form.querySelector('#barUpGroup').style.display = sessionType === 'practice' ? 'block' : 'none';
             }
-
-            // Wire up session type and bar up toggles
-            form.querySelectorAll('input[name="sessionType"]').forEach(radio => {
-                radio.addEventListener('change', toggleVisibilityForSession);
-            });
-            form.querySelectorAll('input[name="barUp"]').forEach(radio => {
-                radio.addEventListener('change', toggleVisibilityForSession);
-            });
             toggleVisibilityForSession();
 
-            // Save button
+            if (settings.enableStandards) {
+                const standardsSelect = form.querySelector('#standardsValue');
+                if (standardsSelect) {
+                    standardsSelect.innerHTML = '';
+                    if (standardsUnitVal === 'cm') {
+                        for (let cm = 40; cm <= 80; cm += 5) {
+                            standardsSelect.appendChild(new Option(`${cm} cm`, cm));
+                        }
+                    } else {
+                        for (let inch = 18; inch <= 31; inch++) {
+                            standardsSelect.appendChild(new Option(`${inch} in`, inch));
+                        }
+                        standardsSelect.appendChild(new Option('31.5 in', 31.5));
+                    }
+                    if (standardsInchesVal != null) {
+                        let preselect;
+                        if (standardsUnitVal === 'cm') {
+                            const cmVal = standardsInchesVal / 0.393701;
+                            preselect = Math.round(cmVal / 5) * 5;
+                            preselect = Math.min(80, Math.max(40, preselect));
+                        } else {
+                            if (standardsInchesVal > 31) {
+                                preselect = 31.5;
+                            } else {
+                                preselect = Math.round(standardsInchesVal);
+                                preselect = Math.min(31, Math.max(18, preselect));
+                            }
+                        }
+                        const match = Array.from(standardsSelect.options).find(opt => parseFloat(opt.value) === parseFloat(preselect));
+                        if (match) {
+                            match.selected = true;
+                        }
+                    }
+                }
+            }
+
+            const managePolesBtn = form.querySelector('#managePolesBtn');
+            if (managePolesBtn) {
+                managePolesBtn.addEventListener('click', () => {
+                    renderPolesScreen();
+                });
+            }
+
+            const poleSelectEl = form.querySelector('#poleSelect');
+            const poleFields = form.querySelector('#poleFields');
+            if (poleSelectEl && poleFields) {
+                const updatePoleFields = () => {
+                    if (poleSelectEl.value === 'add-new') {
+                        poleFields.style.display = 'block';
+                    } else {
+                        poleFields.style.display = 'none';
+                    }
+                };
+                updatePoleFields();
+                poleSelectEl.addEventListener('change', () => {
+                    updatePoleFields();
+                });
+            }
+
+            const barHeightInputs = ['#barFeet', '#barInchesInput', '#barMeters']
+                .map(selector => form.querySelector(selector))
+                .filter(Boolean);
+            barHeightInputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    if (!lastCompetitionJump || lastCompetitionJump.result !== 'make') return;
+                    const currentBar = getBarHeightValue();
+                    if (currentBar != null && lastCompetitionJump.barHeightInches != null && currentBar !== lastCompetitionJump.barHeightInches) {
+                        attemptValue = '1';
+                        setSelected(attemptButtons, attemptValue);
+                    }
+                });
+            });
+
+            function getBarHeightValue() {
+                if (barUnitVal === 'imperial') {
+                    const feetVal = parseFloat(form.querySelector('#barFeet')?.value) || 0;
+                    const inchVal = parseFloat(form.querySelector('#barInchesInput')?.value) || 0;
+                    const total = feetVal * 12 + inchVal;
+                    return total > 0 ? parseFloat(total.toFixed(2)) : null;
+                }
+                const mVal = parseFloat(form.querySelector('#barMeters')?.value) || 0;
+                const total = mVal * 39.3701;
+                return total > 0 ? parseFloat(total.toFixed(2)) : null;
+            }
+
             const saveBtn = document.createElement('button');
             saveBtn.className = 'button-primary';
-            saveBtn.textContent = 'Save Jump';
+            saveBtn.textContent = 'Add Jump';
             saveBtn.type = 'button';
             saveBtn.addEventListener('click', () => {
-                const selectedSession = form.querySelector('input[name="sessionType"]:checked').value;
-                const barUpValue = form.querySelector('input[name="barUp"]:checked').value;
                 const logAthlete = Storage.getAthlete(athleteSelectEl.value);
                 if (!logAthlete) {
                     alert('Select an athlete to log the jump.');
                     return;
                 }
-                // collect values
-                const stepsCount = form.querySelector('#stepsCount').value;
-                const stepsType = form.querySelector('#stepsType').value;
-                const poleBrand = form.querySelector('#poleBrand').value.trim();
-                const poleWeight = form.querySelector('#poleWeight').value.trim();
-                const poleLength = form.querySelector('#poleLength').value.trim();
-                // save pole combination
-                if (poleBrand || poleWeight || poleLength) {
-                    Storage.addPole({ brand: poleBrand, weight: poleWeight, length: poleLength });
+
+                const barHeightInches = getBarHeightValue();
+                let stepsCount = null;
+                let stepsType = null;
+                if (settings.enableSteps) {
+                    const stepsCountValue = form.querySelector('#stepsCount')?.value;
+                    stepsCount = stepsCountValue ? parseInt(stepsCountValue, 10) : null;
+                    stepsType = form.querySelector('#stepsType')?.value || null;
                 }
-                // grip
-                const gripUnit = gripUnitVal;
-                let gripInchesCalc = null;
-                if (gripUnit === 'imperial') {
-                    const feetVal = parseFloat(form.querySelector('#gripFeet').value) || 0;
-                    const inchVal = parseFloat(form.querySelector('#gripInchesInput').value) || 0;
-                    gripInchesCalc = feetVal * 12 + inchVal;
-                } else {
-                    const mVal = parseFloat(form.querySelector('#gripMeters').value) || 0;
-                    gripInchesCalc = mVal * 39.3701;
-                }
-                // takeoff
-                const takeoffUnit = takeoffUnitVal;
-                let takeoffInchesCalc = null;
-                if (takeoffUnit === 'imperial') {
-                    const feetVal = parseFloat(form.querySelector('#takeoffFeet').value) || 0;
-                    const inchVal = parseFloat(form.querySelector('#takeoffInchesInput').value) || 0;
-                    takeoffInchesCalc = feetVal * 12 + inchVal;
-                } else {
-                    const mVal = parseFloat(form.querySelector('#takeoffMeters').value) || 0;
-                    takeoffInchesCalc = mVal * 39.3701;
-                }
-                // bar height
-                const barUnit = barUnitVal;
-                let barInchesCalc = null;
-                if (selectedSession === 'competition' || (selectedSession === 'practice' && barUpValue === 'yes')) {
-                    if (barUnit === 'imperial') {
-                        const feetVal = parseFloat(form.querySelector('#barFeet').value) || 0;
-                        const inchVal = parseFloat(form.querySelector('#barInchesInput').value) || 0;
-                        barInchesCalc = feetVal * 12 + inchVal;
+
+                let poleBrand = '';
+                let poleWeight = '';
+                let poleLength = '';
+                if (settings.enablePoleSelection) {
+                    const selectedPole = poleSelectEl?.value || 'add-new';
+                    if (selectedPole && selectedPole !== 'add-new') {
+                        const parts = selectedPole.split('|');
+                        poleBrand = parts[0] || '';
+                        poleWeight = parts[1] || '';
+                        poleLength = parts[2] || '';
                     } else {
-                        const mVal = parseFloat(form.querySelector('#barMeters').value) || 0;
-                        barInchesCalc = mVal * 39.3701;
+                        poleBrand = form.querySelector('#poleBrand')?.value.trim() || '';
+                        poleWeight = form.querySelector('#poleWeight')?.value.trim() || '';
+                        poleLength = form.querySelector('#poleLength')?.value.trim() || '';
+                    }
+                    if (poleBrand || poleWeight || poleLength) {
+                        Storage.addPole({ brand: poleBrand, weight: poleWeight, length: poleLength });
                     }
                 }
-                // standards
-                const standardsUnit = standardsUnitVal;
-                // standardsValue is a select; parse its value as float
-                const standardsVal = parseFloat(form.querySelector('#standardsValue').value);
-                let standardsInchesCalc = 0;
-                if (standardsUnit === 'cm') {
-                    standardsInchesCalc = standardsVal * 0.393701;
-                } else {
-                    standardsInchesCalc = standardsVal;
+
+                let gripInchesCalc = null;
+                if (settings.enableGripHeight) {
+                    if (gripUnitVal === 'imperial') {
+                        const feetRaw = form.querySelector('#gripFeet')?.value ?? '';
+                        const inchRaw = form.querySelector('#gripInchesInput')?.value ?? '';
+                        if (feetRaw !== '' || inchRaw !== '') {
+                            const feetVal = parseFloat(feetRaw) || 0;
+                            const inchVal = parseFloat(inchRaw) || 0;
+                            gripInchesCalc = feetVal * 12 + inchVal;
+                        }
+                    } else {
+                        const mRaw = form.querySelector('#gripMeters')?.value ?? '';
+                        if (mRaw !== '') {
+                            const mVal = parseFloat(mRaw) || 0;
+                            gripInchesCalc = mVal * 39.3701;
+                        }
+                    }
                 }
-                const notes = form.querySelector('#notes').value || '';
-                // Approach mark calculation
+
+                let takeoffInchesCalc = null;
+                if (settings.enableTakeoffDistance) {
+                    if (takeoffUnitVal === 'imperial') {
+                        const feetRaw = form.querySelector('#takeoffFeet')?.value ?? '';
+                        const inchRaw = form.querySelector('#takeoffInchesInput')?.value ?? '';
+                        if (feetRaw !== '' || inchRaw !== '') {
+                            const feetVal = parseFloat(feetRaw) || 0;
+                            const inchVal = parseFloat(inchRaw) || 0;
+                            takeoffInchesCalc = feetVal * 12 + inchVal;
+                        }
+                    } else {
+                        const mRaw = form.querySelector('#takeoffMeters')?.value ?? '';
+                        if (mRaw !== '') {
+                            const mVal = parseFloat(mRaw) || 0;
+                            takeoffInchesCalc = mVal * 39.3701;
+                        }
+                    }
+                }
+
                 let approachInchesCalc = null;
-                let approachMetersInput, approachFeetInput, approachInchesInput;
-                if (approachUnitVal === 'imperial') {
-                    const feetVal = parseFloat(form.querySelector('#approachFeet').value) || 0;
-                    const inchVal = parseFloat(form.querySelector('#approachInchesInput').value) || 0;
-                    approachInchesCalc = feetVal * 12 + inchVal;
-                } else {
-                    const mVal = parseFloat(form.querySelector('#approachMeters').value) || 0;
-                    approachInchesCalc = mVal * 39.3701;
+                if (settings.enableApproachDistance) {
+                    if (approachUnitVal === 'imperial') {
+                        const feetRaw = form.querySelector('#approachFeet')?.value ?? '';
+                        const inchRaw = form.querySelector('#approachInchesInput')?.value ?? '';
+                        if (feetRaw !== '' || inchRaw !== '') {
+                            const feetVal = parseFloat(feetRaw) || 0;
+                            const inchVal = parseFloat(inchRaw) || 0;
+                            approachInchesCalc = feetVal * 12 + inchVal;
+                        }
+                    } else {
+                        const mRaw = form.querySelector('#approachMeters')?.value ?? '';
+                        if (mRaw !== '') {
+                            const mVal = parseFloat(mRaw) || 0;
+                            approachInchesCalc = mVal * 39.3701;
+                        }
+                    }
                 }
-                // Coach mark calculation
+
                 let coachMarkInchesCalc = null;
                 let coachMarkStepCalc = null;
-                let hitCoachMark = false;
-                if (enableCoachMark) {
-                    hitCoachMark = form.querySelector('#hitCoachMark').checked;
-                    if (coachMarkTypeVal === 'distance') {
-                        if (coachMarkUnitVal === 'imperial') {
-                            const feetVal = parseFloat(form.querySelector('#coachFeet').value) || 0;
-                            const inchVal = parseFloat(form.querySelector('#coachInchesInput').value) || 0;
-                            coachMarkInchesCalc = feetVal * 12 + inchVal;
+                let hitCoachMark = null;
+                if (settings.enableCoachMark) {
+                    hitCoachMark = form.querySelector('#hitCoachMark')?.checked || false;
+                    if (settings.coachMarkType === 'distance') {
+                        if (settings.coachMarkUnit === 'imperial') {
+                            const feetRaw = form.querySelector('#coachFeet')?.value ?? '';
+                            const inchRaw = form.querySelector('#coachInchesInput')?.value ?? '';
+                            if (feetRaw !== '' || inchRaw !== '') {
+                                const feetVal = parseFloat(feetRaw) || 0;
+                                const inchVal = parseFloat(inchRaw) || 0;
+                                coachMarkInchesCalc = feetVal * 12 + inchVal;
+                            }
                         } else {
-                            const mVal = parseFloat(form.querySelector('#coachMeters').value) || 0;
-                            coachMarkInchesCalc = mVal * 39.3701;
+                            const mRaw = form.querySelector('#coachMeters')?.value ?? '';
+                            if (mRaw !== '') {
+                                const mVal = parseFloat(mRaw) || 0;
+                                coachMarkInchesCalc = mVal * 39.3701;
+                            }
                         }
-                        // Hard constraint: coach distance must be less than approach
-                        if (approachInchesCalc != null && coachMarkInchesCalc >= approachInchesCalc) {
-                            alert("Coach's mark must be less than approach mark distance.");
+                        if (approachInchesCalc != null && coachMarkInchesCalc != null && coachMarkInchesCalc >= approachInchesCalc) {
+                            alert("Coach's mark must be less than approach distance.");
                             return;
                         }
                     } else {
-                        // step type
-                        coachMarkStepCalc = parseInt(form.querySelector('#coachStep').value, 10) || 0;
-                        const totalStepsCount = stepsCount === '' ? null : parseInt(stepsCount, 10);
-                        if (totalStepsCount != null && coachMarkStepCalc >= totalStepsCount) {
+                        const stepRaw = form.querySelector('#coachStep')?.value ?? '';
+                        coachMarkStepCalc = stepRaw !== '' ? parseInt(stepRaw, 10) : null;
+                        if (stepsCount != null && coachMarkStepCalc != null && coachMarkStepCalc >= stepsCount) {
                             alert("Coach's mark step must be less than total steps.");
                             return;
                         }
                     }
                 }
-                // Takeoff step hit
-                let hitTakeoffStep = false;
-                if (enableTakeoffStepCheck) {
-                    hitTakeoffStep = form.querySelector('#hitTakeoffStep').checked;
+
+                let hitTakeoffStep = null;
+                if (settings.enableTakeoffStepCheck) {
+                    hitTakeoffStep = form.querySelector('#hitTakeoffStep')?.checked || false;
                 }
+
+                let standardsInchesCalc = null;
+                if (settings.enableStandards) {
+                    const standardsValue = parseFloat(form.querySelector('#standardsValue')?.value);
+                    if (!isNaN(standardsValue)) {
+                        standardsInchesCalc = standardsUnitVal === 'cm' ? standardsValue * 0.393701 : standardsValue;
+                    }
+                }
+
+                const notes = settings.enableNotes ? form.querySelector('#notes')?.value || '' : '';
+
                 const jumpData = {
                     createdAt: new Date().toISOString(),
-                    stepsCount: stepsCount === '' ? null : parseInt(stepsCount, 10),
+                    sessionType,
+                    attempt: sessionType === 'competition' ? parseInt(attemptValue, 10) : null,
+                    barUp: sessionType === 'practice' ? barUpValue === 'yes' : null,
+                    stepsCount,
                     stepsType,
                     poleBrand,
                     poleWeight,
                     poleLength,
-                    gripInches: gripInchesCalc !== null ? parseFloat(gripInchesCalc.toFixed(2)) : null,
-                    gripUnit,
-                    takeoffInches: takeoffInchesCalc !== null ? parseFloat(takeoffInchesCalc.toFixed(2)) : null,
-                    takeoffUnit,
-                    barHeightInches: barInchesCalc !== null ? parseFloat(barInchesCalc.toFixed(2)) : null,
-                    barHeightUnit: barInchesCalc !== null ? barUnit : null,
-                    standardsInches: parseFloat(standardsInchesCalc.toFixed(2)),
-                    standardsUnit,
-                    result: (selectedSession === 'competition' || (selectedSession === 'practice' && barUpValue === 'yes')) ? selectedResult : null,
+                    gripInches: gripInchesCalc != null ? parseFloat(gripInchesCalc.toFixed(2)) : null,
+                    gripUnit: settings.enableGripHeight ? gripUnitVal : null,
+                    takeoffInches: takeoffInchesCalc != null ? parseFloat(takeoffInchesCalc.toFixed(2)) : null,
+                    takeoffUnit: settings.enableTakeoffDistance ? takeoffUnitVal : null,
+                    barHeightInches: barHeightInches != null ? parseFloat(barHeightInches.toFixed(2)) : null,
+                    barHeightUnit: barHeightInches != null ? barUnitVal : null,
+                    standardsInches: standardsInchesCalc != null ? parseFloat(standardsInchesCalc.toFixed(2)) : null,
+                    standardsUnit: standardsInchesCalc != null ? standardsUnitVal : null,
+                    result: (sessionType === 'competition' || (sessionType === 'practice' && barUpValue === 'yes')) ? selectedResult : null,
                     notes,
-                    // New fields
-                    approachInches: approachInchesCalc !== null ? parseFloat(approachInchesCalc.toFixed(2)) : null,
-                    approachUnit: approachUnitVal,
-                    coachMarkType: enableCoachMark ? coachMarkTypeVal : null,
-                    coachMarkInches: enableCoachMark && coachMarkTypeVal === 'distance' && coachMarkInchesCalc !== null ? parseFloat(coachMarkInchesCalc.toFixed(2)) : null,
-                    coachMarkUnit: enableCoachMark && coachMarkTypeVal === 'distance' ? coachMarkUnitVal : null,
-                    coachMarkStep: enableCoachMark && coachMarkTypeVal === 'step' ? coachMarkStepCalc : null,
-                    hitCoachMark: enableCoachMark ? hitCoachMark : null,
-                    hitTakeoffStep: enableTakeoffStepCheck ? hitTakeoffStep : null
+                    approachInches: approachInchesCalc != null ? parseFloat(approachInchesCalc.toFixed(2)) : null,
+                    approachUnit: settings.enableApproachDistance ? approachUnitVal : null,
+                    coachMarkType: settings.enableCoachMark ? settings.coachMarkType : null,
+                    coachMarkInches: settings.enableCoachMark && settings.coachMarkType === 'distance' && coachMarkInchesCalc != null ? parseFloat(coachMarkInchesCalc.toFixed(2)) : null,
+                    coachMarkUnit: settings.enableCoachMark && settings.coachMarkType === 'distance' ? settings.coachMarkUnit : null,
+                    coachMarkStep: settings.enableCoachMark && settings.coachMarkType === 'step' ? coachMarkStepCalc : null,
+                    hitCoachMark: settings.enableCoachMark ? hitCoachMark : null,
+                    hitTakeoffStep: settings.enableTakeoffStepCheck ? hitTakeoffStep : null,
+                    landing: settings.enableLanding ? landingValue : null,
+                    poleBend: settings.enablePoleBend ? poleBendValue : null
                 };
+
                 Storage.addJump(logAthlete.id, jumpData);
-                renderAthleteDetailScreen(logAthlete.id);
+                renderLogScreen(logAthlete.id);
             });
             container.appendChild(saveBtn);
+        });
+    }
+
+    /**
+     * Render the full jump log review screen grouped by date.
+     * @param {string} selectedAthleteId
+     */
+    function renderJumpLogReviewScreen(selectedAthleteId) {
+        navigate(container => {
+            const backBtn = document.createElement('button');
+            backBtn.textContent = '← Back';
+            backBtn.className = 'button-primary';
+            backBtn.style.marginBottom = '8px';
+            backBtn.addEventListener('click', () => {
+                renderLogScreen(selectedAthleteId);
+            });
+            container.appendChild(backBtn);
+
+            const header = createScreenTitle('Jump Log');
+            container.appendChild(header);
+
+            const athletes = Storage.getAthletes();
+            if (athletes.length === 0) {
+                const empty = document.createElement('p');
+                empty.textContent = 'No athletes available.';
+                container.appendChild(empty);
+                return;
+            }
+
+            const activeAthleteId = selectedAthleteId || athletes[0].id;
+            const athleteSelectGroup = document.createElement('div');
+            athleteSelectGroup.className = 'field-group';
+            athleteSelectGroup.innerHTML = `
+                <label>Athlete
+                    <select id="reviewAthleteSelect">
+                        ${athletes
+                            .slice()
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(a => `<option value="${escapeHtml(a.id)}" ${a.id === activeAthleteId ? 'selected' : ''}>${escapeHtml(a.name)}</option>`)
+                            .join('')}
+                    </select>
+                </label>
+            `;
+            container.appendChild(athleteSelectGroup);
+
+            athleteSelectGroup.querySelector('#reviewAthleteSelect').addEventListener('change', e => {
+                renderJumpLogReviewScreen(e.target.value);
+            });
+
+            const jumps = Storage.getJumpsForAthlete(activeAthleteId);
+            if (jumps.length === 0) {
+                const empty = document.createElement('p');
+                empty.textContent = 'No jumps logged yet.';
+                container.appendChild(empty);
+                return;
+            }
+
+            const grouped = jumps.reduce((acc, jump) => {
+                const date = resolveJumpDate(jump);
+                const dateKey = date ? date.toLocaleDateString() : 'Unknown Date';
+                if (!acc[dateKey]) {
+                    acc[dateKey] = { practice: [], competition: [] };
+                }
+                const bucket = jump.sessionType === 'competition' ? 'competition' : 'practice';
+                acc[dateKey][bucket].push(jump);
+                return acc;
+            }, {});
+
+            Object.entries(grouped).forEach(([dateKey, buckets]) => {
+                const dateTitle = document.createElement('h3');
+                dateTitle.className = 'section-title';
+                dateTitle.textContent = dateKey;
+                container.appendChild(dateTitle);
+
+                ['practice', 'competition'].forEach(type => {
+                    if (buckets[type].length === 0) return;
+                    const typeLabel = document.createElement('h4');
+                    typeLabel.className = 'subsection-title';
+                    typeLabel.textContent = type === 'practice' ? 'Practice' : 'Competition';
+                    container.appendChild(typeLabel);
+
+                    const list = document.createElement('ul');
+                    list.className = 'list';
+                    buckets[type].forEach(jump => {
+                        const li = document.createElement('li');
+                        li.className = 'list-item';
+                        const barLabel = jump.barHeightInches != null
+                            ? (jump.barHeightUnit === 'metric'
+                                ? `${(jump.barHeightInches / 39.3701).toFixed(2)} m`
+                                : `${Math.floor(jump.barHeightInches / 12)}' ${(jump.barHeightInches % 12).toFixed(1)}"`)
+                            : 'No bar';
+                        const resultLabel = jump.result ? jump.result.toUpperCase() : '';
+                        const attemptLabel = jump.attempt ? `Attempt ${jump.attempt}` : '';
+                        li.innerHTML = `<span><strong>${barLabel}</strong> ${resultLabel}</span><span>${escapeHtml(attemptLabel)}</span>`;
+                        li.addEventListener('click', () => {
+                            renderJumpDetailScreen(jump.id);
+                        });
+                        list.appendChild(li);
+                    });
+                    container.appendChild(list);
+                });
+            });
         });
     }
 
@@ -1539,6 +1909,15 @@
             if (jump.hitTakeoffStep != null) {
                 addItem('Hit Takeoff Step', jump.hitTakeoffStep ? 'Yes' : 'No');
             }
+            if (jump.sessionType) {
+                addItem('Session Type', jump.sessionType.charAt(0).toUpperCase() + jump.sessionType.slice(1));
+            }
+            if (jump.sessionType === 'competition' && jump.attempt != null) {
+                addItem('Attempt', jump.attempt);
+            }
+            if (jump.sessionType === 'practice' && jump.barUp != null) {
+                addItem('Bar Up', jump.barUp ? 'Yes' : 'No');
+            }
             // Bar height display
             if (jump.barHeightInches != null) {
                 let barDisplay;
@@ -1556,6 +1935,12 @@
                 addItem('Bar Height', '');
             }
             addItem('Result', jump.result || '');
+            if (jump.landing) {
+                addItem('Landing', jump.landing);
+            }
+            if (jump.poleBend) {
+                addItem('Pole Bend', jump.poleBend);
+            }
             addItem('Notes', jump.notes || '');
             const recordedDate = resolveJumpDate(jump);
             addItem('Recorded', recordedDate ? formatDate(recordedDate) : '');

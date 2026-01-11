@@ -16,6 +16,13 @@ h1, h2, h3 {
     margin: 0 0 8px;
 }
 
+.subsection-title {
+    margin: 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
 .screen-title {
     margin: 0 0 12px;
     font-size: 24px;
@@ -76,6 +83,29 @@ h1, h2, h3 {
     width: 100%;
     cursor: pointer;
     margin-top: 10px;
+}
+
+.button-secondary {
+    background-color: #111a2b;
+    color: #e5e5e5;
+    border: 1px solid #243045;
+    padding: 12px 16px;
+    font-size: 14px;
+    border-radius: 8px;
+    width: 100%;
+    cursor: pointer;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.button-row .button-primary,
+.button-row .button-secondary {
+    margin-top: 0;
+    flex: 1;
 }
 
 .button-primary:active {
@@ -140,6 +170,48 @@ textarea {
     display: flex;
     flex-direction: column;
     margin-top: 8px;
+}
+
+.field-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.option-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.option-button {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #243045;
+    border-radius: 8px;
+    background-color: #111a2b;
+    color: #e5e5e5;
+    cursor: pointer;
+}
+
+.option-button.selected {
+    border-color: #4ade80;
+    background-color: #4ade80;
+    color: #0f172a;
+}
+
+.inline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.helper-text {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #7b8794;
 }
 
 /* Unit groups for metric/imperial fields */
