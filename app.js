@@ -113,6 +113,28 @@
     return el;
   }
 
+  function createUpdateBanner() {
+    const banner = createElement('div', 'pwa-update-banner');
+    const message = createElement('span', 'pwa-update-message');
+    const button = createElement('button', 'pwa-update-button', 'Refresh');
+    button.type = 'button';
+    banner.append(message, button);
+    banner.hidden = true;
+    document.body.appendChild(banner);
+
+    return {
+      show({ text, actionLabel, onAction }) {
+        message.textContent = text;
+        button.textContent = actionLabel;
+        button.onclick = onAction;
+        banner.hidden = false;
+      },
+      hide() {
+        banner.hidden = true;
+      },
+    };
+  }
+
   function renderHeader(title) {
     const header = createElement('header', 'top-header');
     const wordmark = createElement('div', 'wordmark', 'TAYKOF');
@@ -1289,5 +1311,61 @@
     app.appendChild(screen);
   }
 
+  function initServiceWorkerUpdates() {
+    if (!('serviceWorker' in navigator)) return;
+
+    const banner = createUpdateBanner();
+    let waitingWorker = null;
+
+    const showRefresh = () => {
+      banner.show({
+        text: 'New version available.',
+        actionLabel: 'Refresh',
+        onAction: () => window.location.reload(),
+      });
+    };
+
+    const showUpdatePrompt = worker => {
+      waitingWorker = worker;
+      banner.show({
+        text: 'New version available.',
+        actionLabel: 'Update',
+        onAction: () => {
+          if (waitingWorker) {
+            waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        },
+      });
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      showRefresh();
+    });
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          if (registration.waiting) {
+            showUpdatePrompt(registration.waiting);
+          }
+
+          registration.addEventListener('updatefound', () => {
+            const installingWorker = registration.installing;
+            if (!installingWorker) return;
+
+            installingWorker.addEventListener('statechange', () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdatePrompt(installingWorker);
+              }
+            });
+          });
+        })
+        .catch(error => {
+          console.log('ServiceWorker registration failed: ', error);
+        });
+    });
+  }
+
   render();
+  initServiceWorkerUpdates();
 })();

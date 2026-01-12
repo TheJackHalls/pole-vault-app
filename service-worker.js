@@ -6,9 +6,10 @@
  * background sync and more complex caching strategies.
  */
 
-// Updated cache name for Taykof v0.4.1. Increment this value whenever
+const APP_VERSION = '1.0.1';
+// Updated cache name for Taykof. Increment APP_VERSION whenever
 // making changes to the cached files so the service worker picks up the new assets.
-const CACHE_NAME = 'taykof-cache-v041';
+const CACHE_NAME = `taykof-cache-v${APP_VERSION}`;
 /*
  * Determine the base path for caching resources. When deployed under a
  * subpath (e.g. GitHub Pages), the service worker will be located at
@@ -24,7 +25,6 @@ const URLS_TO_CACHE = [
   'styles.css',
   'app.js',
   'storage.js',
-  'manifest.json',
   // include new icons for the PWA; these are referenced in the manifest
   'icon-192.png',
   'icon-512.png'
@@ -35,14 +35,22 @@ const URLS_TO_CACHE = [
 });
 
 const ASSET_REFRESH_PATTERN = /\.(?:js|css)$/i;
+const NON_CACHEABLE_PATHS = new Set([
+  `${BASE_PATH}manifest.json`,
+  `${BASE_PATH}service-worker.js`,
+]);
 
 self.addEventListener('install', event => {
-  // Take control of the page immediately after installation.
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(URLS_TO_CACHE))
   );
+});
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', event => {
@@ -59,7 +67,6 @@ self.addEventListener('activate', event => {
         })
       );
       await self.clients.claim();
-      await self.skipWaiting();
     })()
   );
 });
@@ -68,6 +75,13 @@ self.addEventListener('fetch', event => {
   const { request } = event;
 
   if (request.method !== 'GET') {
+    return;
+  }
+
+  const requestPath = new URL(request.url).pathname;
+
+  if (NON_CACHEABLE_PATHS.has(requestPath)) {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
     return;
   }
 

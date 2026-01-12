@@ -197,6 +197,43 @@ textarea {
   flex-wrap: wrap;
 }
 
+.pwa-update-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  z-index: 20;
+}
+
+.pwa-update-message {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.pwa-update-button {
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pwa-update-button:hover {
+  background: var(--accent-dark);
+}
+
 .option-row {
   display: flex;
   gap: 8px;
