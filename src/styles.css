@@ -1,0 +1,162 @@
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+  background-color: #f6f7fb;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px 32px;
+  gap: 24px;
+}
+
+.app-header h1 {
+  margin: 16px 0 8px;
+  font-size: 1.6rem;
+}
+
+.wordmark {
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  font-size: 1rem;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.helper-text {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.app-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #ffffff;
+  padding: 18px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+input {
+  border: 1px solid #cbd5f5;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.primary {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.notice {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.notice.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.notice.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.notice.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.link-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.body-text {
+  margin: 0;
+  color: #334155;
+}
+
+.page-status {
+  padding: 24px;
+  text-align: center;
+  font-weight: 600;
+  color: #475569;
+}
+
+.app-footer {
+  margin-top: auto;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+}
