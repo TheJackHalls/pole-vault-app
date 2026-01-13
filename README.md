@@ -20,6 +20,21 @@ This mobile‑first web application enables a pole vault coach to log practice j
 
 3. **Open the app**: The dev server will print the local URL (usually `http://localhost:5173`). Visit it in your browser.
 
+### Firebase Auth setup (required for login)
+
+Create a Firebase project with **Email/Password** auth enabled. Then create a `.env.local` file (not committed) at the repo root with Vite-style variables:
+
+```bash
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
+```
+
+The dev server reads `.env.local` and serves the values to the browser at `/env.js`. If the file is missing, the auth screens will show a configuration warning.
+
 ### Static server (no tooling)
 
 If you prefer a simple static server without Node tooling:

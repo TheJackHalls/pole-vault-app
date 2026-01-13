@@ -69,6 +69,13 @@ body {
   font-weight: 600;
 }
 
+.screen-helper {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .shell-subtitle {
   font-size: 14px;
   letter-spacing: 0.08em;
@@ -157,6 +164,124 @@ body {
   padding: 16px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   border: 1px solid var(--border);
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.card-description {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-size: 15px;
+  background: var(--card);
+  color: var(--text);
+}
+
+.form-input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+.form-message {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.form-success {
+  color: #16a34a;
+  font-size: 13px;
+}
+
+.primary-button,
+.secondary-button {
+  border-radius: 14px;
+  padding: 12px 16px;
+  border: none;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.25);
+}
+
+.primary-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.auth-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.text-link {
+  color: var(--accent-dark);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.text-link:focus,
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.status-message {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.status-message.warning {
+  border-color: #facc15;
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.app-actions {
+  margin-top: 16px;
 }
 
 .card-header {

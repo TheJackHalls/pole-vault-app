@@ -4,6 +4,7 @@ const path = require('path');
 
 const port = Number(process.env.PORT) || 5173;
 const rootDir = path.resolve(__dirname, '..');
+const envPath = path.join(rootDir, '.env.local');
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -28,10 +29,37 @@ const serveFile = (filePath, res) => {
   });
 };
 
+const loadEnv = () => {
+  try {
+    const raw = fs.readFileSync(envPath, 'utf8');
+    return raw
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'))
+      .reduce((acc, line) => {
+        const [key, ...rest] = line.split('=');
+        if (!key || !key.startsWith('VITE_')) return acc;
+        const value = rest.join('=').trim();
+        acc[key] = value.replace(/^"(.*)"$/, '$1');
+        return acc;
+      }, {});
+  } catch (error) {
+    return {};
+  }
+};
+
 const server = http.createServer((req, res) => {
   const requestUrl = req.url ? req.url.split('?')[0] : '/';
   const safePath = requestUrl === '/' ? '/index.html' : requestUrl;
   const filePath = path.join(rootDir, safePath);
+
+  if (requestUrl === '/env.js') {
+    const env = loadEnv();
+    const payload = `window.__ENV__ = ${JSON.stringify(env, null, 2)};`;
+    res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
+    res.end(payload);
+    return;
+  }
 
   fs.stat(filePath, (err, stats) => {
     if (!err && stats.isFile()) {
