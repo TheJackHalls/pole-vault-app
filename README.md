@@ -4,17 +4,32 @@ This mobile‑first web application enables a pole vault coach to log practice j
 
 ## Running Locally
 
-1. **Download the app**: Copy the entire `pole-vault-app` folder to your computer. It contains `index.html`, JavaScript and CSS files, a manifest, a service worker and an icon.
-2. **Serve the app over HTTP**: Many browsers restrict access to certain APIs (like `serviceWorker` and `localStorage`) when running directly from the filesystem. Use a simple HTTP server instead. For example:
+### Recommended (Node)
+
+1. **Install dependencies**:
 
    ```bash
-   cd pole-vault-app
-   python3 -m http.server 8000
+   npm install
    ```
 
-   Then navigate to `http://localhost:8000` in your browser.
+2. **Start the dev server**:
 
-3. **Usage**: The app will start on the Athletes list screen. You can add athletes, open an athlete to view or add jumps, and inspect individual jump details.
+   ```bash
+   npm run dev
+   ```
+
+3. **Open the app**: The dev server will print the local URL (usually `http://localhost:5173`). Visit it in your browser.
+
+### Static server (no tooling)
+
+If you prefer a simple static server without Node tooling:
+
+```bash
+cd pole-vault-app
+python3 -m http.server 8000
+```
+
+Then navigate to `http://localhost:8000` in your browser.
 
 ## Adding to Home Screen on iPhone
 
