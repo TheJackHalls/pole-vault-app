@@ -31,6 +31,7 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
 ```
 
 Do not commit `.env.local`. If the file is missing, the auth screens will show a configuration warning.

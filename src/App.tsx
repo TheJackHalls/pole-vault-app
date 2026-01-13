@@ -1,25 +1,41 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import AppHome from './pages/AppHome';
+import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
+import Signup from './pages/Signup';
+import ProtectedRoute from './auth/ProtectedRoute';
+import { useAuth } from './auth/AuthProvider';
 
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { AuthProvider } from './contexts/AuthContext';
-import { AppPage } from './pages/AppPage';
-import { LoginPage } from './pages/LoginPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { SignupPage } from './pages/SignupPage';
+const RootRedirect = () => {
+  const { user, loading } = useAuth();
 
-export const App = () => {
-  return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route path="/app" element={<AppPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </AuthProvider>
-  );
+  if (loading) {
+    return (
+      <div className="page-status" role="status" aria-live="polite">
+        Loading your session...
+      </div>
+    );
+  }
+
+  return <Navigate to={user ? '/app' : '/login'} replace />;
 };
+
+const App = () => (
+  <Routes>
+    <Route path="/" element={<RootRedirect />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/signup" element={<Signup />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
+    <Route
+      path="/app"
+      element={
+        <ProtectedRoute>
+          <AppHome />
+        </ProtectedRoute>
+      }
+    />
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>
+);
+
+export default App;
